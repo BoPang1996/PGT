@@ -1,0 +1,16 @@
+av
+filelock
+fvcore
+moviepy
+opencv-python
+pandas
+psutil
+pycocotools
+simplejson
+sklearn
+tensorboard
+tensorboardX
+torch
+torchvision
+git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI
+git+https://github.com/facebookresearch/detectron2.git
