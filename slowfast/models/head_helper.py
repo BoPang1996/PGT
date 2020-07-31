@@ -218,27 +218,3 @@ class ResNetBasicHead(nn.Module):
 
         x = x.view(x.shape[0], -1)
         return x
-
-
-class X3DBasicHead(ResNetBasicHead):
-    """
-    X3D head.
-    This layer performs a fully-connected projection during training, when the
-    input size is 1x1x1. It performs a convolutional projection during testing
-    when the input size is larger than 1x1x1. If the inputs are from multiple
-    different pathways, the inputs will be concatenated after pooling.
-    """
-    def __init__(
-        self,
-        dim_in,
-        num_classes,
-        pool_size,
-        dropout_rate=0.0,
-        act_func="softmax",
-    ):
-        super(X3DBasicHead, self).__init__(
-            dim_in, num_classes, pool_size, dropout_rate, act_func)
-        self.projection = nn.Sequential(
-            nn.Linear(sum(dim_in), 2048, bias=True),  # FIXME: constant
-            nn.Linear(2048, num_classes, bias=True),
-        )

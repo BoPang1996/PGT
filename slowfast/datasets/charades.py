@@ -61,8 +61,10 @@ class Charades(torch.utils.data.Dataset):
         # video. For testing, NUM_ENSEMBLE_VIEWS clips are sampled from every
         # video. For every clip, NUM_SPATIAL_CROPS is cropped spatially from
         # the frames.
-        if self.mode in ["train", "val"]:
+        if self.mode in ["train"]:
             self._num_clips = 1
+        elif self.mode in ["val"]:
+            self._num_clips = cfg.TEST.NUM_ENSEMBLE_VIEWS
         elif self.mode in ["test"]:
             self._num_clips = (
                 cfg.TEST.NUM_ENSEMBLE_VIEWS * cfg.TEST.NUM_SPATIAL_CROPS
@@ -128,30 +130,20 @@ class Charades(torch.utils.data.Dataset):
         if isinstance(index, tuple):
             index, short_cycle_idx = index
 
-        if self.mode in ["train", "val"]:
+        if self.mode in ["train"]:
             # -1 indicates random sampling.
             temporal_sample_index = -1
             spatial_sample_index = -1
             min_scale = self.cfg.DATA.TRAIN_JITTER_SCALES[0]
             max_scale = self.cfg.DATA.TRAIN_JITTER_SCALES[1]
             crop_size = self.cfg.DATA.TRAIN_CROP_SIZE
-            if short_cycle_idx in [0, 1]:
-                crop_size = int(
-                    round(
-                        self.cfg.MULTIGRID.SHORT_CYCLE_FACTORS[short_cycle_idx]
-                        * self.cfg.MULTIGRID.DEFAULT_S
-                    )
-                )
-            if self.cfg.MULTIGRID.DEFAULT_S > 0:
-                # Decreasing the scale is equivalent to using a larger "span"
-                # in a sampling grid.
-                min_scale = int(
-                    round(
-                        float(min_scale)
-                        * crop_size
-                        / self.cfg.MULTIGRID.DEFAULT_S
-                    )
-                )
+        elif self.mode in ["val"]:
+            temporal_sample_index = (
+                self._spatial_temporal_idx[index]
+                % self.cfg.TEST.NUM_ENSEMBLE_VIEWS
+            )
+            spatial_sample_index = 1
+            min_scale, max_scale, crop_size = [self.cfg.DATA.TRAIN_CROP_SIZE] * 3
         elif self.mode in ["test"]:
             temporal_sample_index = (
                 self._spatial_temporal_idx[index]

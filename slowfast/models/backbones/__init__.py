@@ -5,17 +5,8 @@ _MODEL_STAGE_DEPTH = {
     # ResNet
     50: (3, 4, 6, 3),
     101: (3, 4, 23, 3),
-    # X3D
-    "S": (3, 5, 11, 7),
-    "M": (3, 5, 11, 7),
-    "XL": (5, 10, 25, 15),
 }
 
-_X3D_NUM_GROUPS = {
-    "S": (54, 108, 216, 432),
-    "M": (54, 108, 216, 432),
-    "XL": (72, 162, 306, 630),
-}
 
 # Basis of temporal kernel sizes for each of the stage.
 _TEMPORAL_KERNEL_BASIS = {
@@ -61,14 +52,6 @@ _TEMPORAL_KERNEL_BASIS = {
         [[3], [3]],  # res4 temporal kernel for slow and fast pathway.
         [[3], [3]],  # res5 temporal kernel for slow and fast pathway.
     ],
-    "x3d": [
-        [[3]],  # conv1 temporal kernel.
-        [[3]],  # res2 temporal kernel.
-        [[3]],  # res3 temporal kernel.
-        [[3]],  # res4 temporal kernel.
-        [[3]],  # res5 temporal kernel.
-        [[1]],  # conv5 temporal kernel.
-    ],
 }
 
 _POOL1 = {
@@ -78,5 +61,4 @@ _POOL1 = {
     "i3d_nopool": [[1, 1, 1]],
     "slow": [[1, 1, 1]],
     "slowfast": [[1, 1, 1], [1, 1, 1]],
-    "x3d": [[1, 1, 1]],
 }

@@ -20,6 +20,7 @@ from slowfast.datasets import loader
 from slowfast.models import build_model
 from slowfast.utils.meters import AVAMeter, TrainMeter, ValMeter
 from slowfast.utils.multigrid import MultigridSchedule
+from slowfast.models.progress_helper import PGT
 
 logger = logging.get_logger(__name__)
 
@@ -46,6 +47,12 @@ def train_epoch(
     train_meter.iter_tic()
     data_size = len(train_loader)
 
+    # Explicitly declare reduction to mean.
+    loss_fun = losses.get_loss_func(cfg.MODEL.LOSS_FUNC)(reduction="mean")
+
+    if cfg.PGT.ENABLE:
+        pgt = PGT(model, cfg, optimizer, loss_fun)
+
     for cur_iter, (inputs, labels, _, meta) in enumerate(train_loader):
         # Transfer the data to the current GPU device.
         if isinstance(inputs, (list,)):
@@ -65,27 +72,32 @@ def train_epoch(
         lr = optim.get_epoch_lr(cur_epoch + float(cur_iter) / data_size, cfg)
         optim.set_lr(optimizer, lr)
 
-        if cfg.DETECTION.ENABLE:
-            # Compute the predictions.
-            preds = model(inputs, meta["boxes"])
+        if not cfg.PGT.ENABLE:
+            if cfg.DETECTION.ENABLE:
+                # Compute the predictions.
+                preds = model(inputs, meta["boxes"])
 
+            else:
+                # Perform the forward pass.
+                preds = model(inputs)
+
+            # Compute the loss.
+            loss = loss_fun(preds, labels)
+
+            # check Nan Loss.
+            misc.check_nan_losses(loss)
+
+            # Perform the backward pass.
+            optimizer.zero_grad()
+            loss.backward()
+            # Update the parameters.
+            optimizer.step()
         else:
-            # Perform the forward pass.
-            preds = model(inputs)
-        # Explicitly declare reduction to mean.
-        loss_fun = losses.get_loss_func(cfg.MODEL.LOSS_FUNC)(reduction="mean")
+            if cfg.DETECTION.ENABLE:
+                raise NotImplementedError()
 
-        # Compute the loss.
-        loss = loss_fun(preds, labels)
-
-        # check Nan Loss.
-        misc.check_nan_losses(loss)
-
-        # Perform the backward pass.
-        optimizer.zero_grad()
-        loss.backward()
-        # Update the parameters.
-        optimizer.step()
+            else:
+                preds, loss = pgt.step_train(inputs, labels)
 
         if cfg.DETECTION.ENABLE:
             if cfg.NUM_GPUS > 1:
@@ -111,7 +123,8 @@ def train_epoch(
                 loss = loss.item()
             else:
                 # Compute the errors.
-                num_topks_correct = metrics.topks_correct(preds, labels, (1, 5))
+                num_topks_correct = metrics.topks_correct(
+                    preds, labels, (1, 5))
                 top1_err, top5_err = [
                     (1.0 - x / preds.size(0)) * 100.0 for x in num_topks_correct
                 ]
@@ -153,6 +166,9 @@ def train_epoch(
     train_meter.log_epoch_stats(cur_epoch)
     train_meter.reset()
 
+    if cfg.PGT.ENABLE:
+        pgt.remove_hook()
+
 
 @torch.no_grad()
 def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
@@ -172,6 +188,9 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
     # Evaluation mode enabled. The running stats would not be updated.
     model.eval()
     val_meter.iter_tic()
+
+    if cfg.PGT.ENABLE:
+        pgt = PGT(model, cfg)
 
     if du.get_world_size() == 1:
         extra_args = {}
@@ -196,7 +215,10 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
 
         if cfg.DETECTION.ENABLE:
             # Compute the predictions.
-            preds = model(inputs, meta["boxes"])
+            if not cfg.PGT.ENABLE:
+                preds = model(inputs, meta["boxes"])
+            else:
+                raise NotImplementedError()
 
             preds = preds.cpu()
             ori_boxes = meta["ori_boxes"].cpu()
@@ -212,7 +234,10 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
             val_meter.update_stats(preds.cpu(), ori_boxes.cpu(), metadata.cpu())
 
         else:
-            preds = model(inputs)
+            if not cfg.PGT.ENABLE:
+                preds = model(inputs)
+            else:
+                preds = pgt.step_eval(inputs)
 
             if cfg.DATA.MULTI_LABEL:
                 if cfg.NUM_GPUS > 1:
@@ -386,8 +411,10 @@ def train(cfg):
     else:
         tblogger = None
     if cfg.DETECTION.ENABLE:
-        train_meter = AVAMeter(len(train_loader), cfg, mode="train", tblogger=tblogger)
-        val_meter = AVAMeter(len(val_loader), cfg, mode="val", tblogger=tblogger)
+        train_meter = AVAMeter(len(train_loader), cfg,
+                               mode="train", tblogger=tblogger)
+        val_meter = AVAMeter(len(val_loader), cfg,
+                             mode="val", tblogger=tblogger)
     else:
         # TODO: put tblogger outside
         train_meter = TrainMeter(len(train_loader), cfg, tblogger)

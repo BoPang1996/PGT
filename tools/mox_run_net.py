@@ -29,9 +29,10 @@ if __name__ == "__main__":
     mox.file.copy_parallel(PIP_S3_PATH, PIP_LOCAL_PATH)
     print("Copy pip packages from obs finished!")
     pip_install_directory(PIP_LOCAL_PATH)
+    pip_install('tensorboardX')
     print("Install pip packages finished!")
 
-    sys.path.append('slowfast/')
+    sys.path.append('progress-action/')
     from run_net import main
 
     main()

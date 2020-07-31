@@ -14,6 +14,7 @@ import slowfast.utils.misc as misc
 from slowfast.datasets import loader
 from slowfast.models import build_model
 from slowfast.utils.meters import AVAMeter, TestMeter
+from slowfast.models.progress_helper import PGT
 
 logger = logging.get_logger(__name__)
 
@@ -43,6 +44,9 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None):
     model.eval()
     test_meter.iter_tic()
 
+    if cfg.PGT.ENABLE:
+        pgt = PGT(model, cfg)
+
     if du.get_world_size() == 1:
         extra_args = {}
     else:
@@ -69,7 +73,10 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None):
 
         if cfg.DETECTION.ENABLE:
             # Compute the predictions.
-            preds = model(inputs, meta["boxes"])
+            if not cfg.PGT.ENABLE:
+                preds = model(inputs, meta["boxes"])
+            else:
+                raise NotImplementedError()
             preds = preds.cpu()
             ori_boxes = meta["ori_boxes"].cpu()
             metadata = meta["metadata"].cpu()
@@ -86,10 +93,12 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None):
                 ori_boxes.detach().cpu(),
                 metadata.detach().cpu(),
             )
-            # test_meter.log_iter_stats(None, cur_iter)
         else:
             # Perform the forward pass.
-            preds = model(inputs)
+            if not cfg.PGT.ENABLE:
+                preds = model(inputs)
+            else:
+                preds = pgt.step_eval(inputs)
 
             # Gather all the predictions across all the devices to perform ensemble.
             if cfg.NUM_GPUS > 1:
@@ -104,7 +113,6 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None):
                 labels.detach().cpu(),
                 video_idx.detach().cpu(),
             )
-            # test_meter.log_iter_stats(cur_iter)
 
         test_meter.iter_tic()
     # Log epoch stats and print the final testing results.

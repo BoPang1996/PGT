@@ -187,6 +187,9 @@ _C.PGT = CfgNode()
 # Whether to use progress training.
 _C.PGT.ENABLE = False
 
+# Whether to train a progress group together.
+_C.PGT.TRAIN_TOGETHER = False
+
 # Length of each progress step.
 _C.PGT.STEP_LEN = 8
 
@@ -382,7 +385,7 @@ _C.LOGS.DIR = './logs'
 _C.LOGS.PERIOD = 100
 
 # Log model or not
-_C.LOGS.LOG_MODEL = True
+_C.LOGS.LOG_MODEL = False
 
 
 # ---------------------------------------------------------------------------- #
@@ -462,13 +465,13 @@ _C.DETECTION.ROI_XFORM_RESOLUTION = 7
 _C.AVA = CfgNode()
 
 # Directory path of frames.
-_C.AVA.FRAME_DIR = "data/ava/frames"
+_C.AVA.FRAME_DIR = "/home/pg/data/AVA/frames"
 
 # Directory path for files of frame lists.
-_C.AVA.FRAME_LIST_DIR = "data/ava/frame_lists"
+_C.AVA.FRAME_LIST_DIR = "/home/pg/data/AVA/frame_lists"
 
 # Directory path for annotation files.
-_C.AVA.ANNOTATION_DIR = "data/ava/annotations"
+_C.AVA.ANNOTATION_DIR = "/home/pg/data/AVA/annotations"
 
 # Filenames of training samples list files.
 _C.AVA.TRAIN_LISTS = ["train.csv"]

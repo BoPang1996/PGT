@@ -189,6 +189,12 @@ class ResNet(nn.Module):
                 dropout_rate=cfg.MODEL.DROPOUT_RATE,
                 act_func=cfg.MODEL.HEAD_ACT,
             )
+        
+        # input shape of each temporal layer, [channel, spatial stride]
+        # FIXME: support i3d and more
+        self.padding_shape = [*[[width_per_group * 8, 8]] * 1,
+                              *[[width_per_group * 16, 16]] * d4,
+                              *[[width_per_group * 32, 32]] * (d5 - 1),]
 
     def forward(self, x, bboxes=None):
         x = self.s1(x)
