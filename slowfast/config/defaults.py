@@ -482,7 +482,7 @@ _C.AVA.TEST_LISTS = ["val.csv"]
 # Filenames of box list files for training. Note that we assume files which
 # contains predicted boxes will have a suffix "predicted_boxes" in the
 # filename.
-_C.AVA.TRAIN_GT_BOX_LISTS = ["2.2/ava_train_v2.2.csv"]
+_C.AVA.TRAIN_GT_BOX_LISTS = ["v2.2/ava_train_v2.2.csv"]
 _C.AVA.TRAIN_PREDICT_BOX_LISTS = ["ava_train_predicted_boxes.csv"]
 
 # Filenames of box list files for test.
@@ -519,13 +519,13 @@ _C.AVA.TEST_FORCE_FLIP = False
 _C.AVA.FULL_TEST_ON_VAL = False
 
 # The name of the file to the ava label map.
-_C.AVA.LABEL_MAP_FILE = "2.2/ava_action_list_v2.2_for_activitynet_2019.pbtxt"
+_C.AVA.LABEL_MAP_FILE = "v2.2/ava_action_list_v2.2_for_activitynet_2019.pbtxt"
 
 # The name of the file to the ava exclusion.
-_C.AVA.EXCLUSION_FILE = "2.2/ava_val_excluded_timestamps_v2.2.csv"
+_C.AVA.EXCLUSION_FILE = "v2.2/ava_val_excluded_timestamps_v2.2.csv"
 
 # The name of the file to the ava groundtruth.
-_C.AVA.GROUNDTRUTH_FILE = "2.2/ava_val_v2.2.csv"
+_C.AVA.GROUNDTRUTH_FILE = "v2.2/ava_val_v2.2.csv"
 
 # Backend to process image, includes `pytorch` and `cv2`.
 _C.AVA.IMG_PROC_BACKEND = "cv2"

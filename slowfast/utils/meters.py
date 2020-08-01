@@ -66,6 +66,7 @@ class AVAMeter(object):
         self.all_ori_boxes = []
         self.all_metadata = []
         self.overall_iters = overall_iters
+        self.MAX_EPOCH = cfg.SOLVER.MAX_EPOCH * overall_iters
         self.excluded_keys = read_exclusions(
             os.path.join(cfg.AVA.ANNOTATION_DIR, cfg.AVA.EXCLUSION_FILE)
         )
@@ -91,10 +92,12 @@ class AVAMeter(object):
             cur_iter (int): the current iteration.
         """
 
-        if (cur_iter + 1) % self.cfg.LOGS.PERIOD != 0:
+        if (cur_iter + 1) % self.cfg.LOGS.PERIOD != 0 and cur_iter != 0:
             return
 
-        eta_sec = self.iter_timer.seconds() * (self.overall_iters - cur_iter)
+        eta_sec = self.iter_timer.seconds() * (
+            self.MAX_EPOCH - (cur_epoch * self.epoch_iters + cur_iter + 1)
+        )
         eta = str(datetime.timedelta(seconds=int(eta_sec)))
         if self.mode == "train":
             stats = {
@@ -532,7 +535,7 @@ class TrainMeter(object):
             cur_epoch (int): the number of current epoch.
             cur_iter (int): the number of current iteration.
         """
-        if (cur_iter + 1) % self._cfg.LOGS.PERIOD != 0:
+        if (cur_iter + 1) % self._cfg.LOGS.PERIOD != 0 and cur_iter != 0:
             return
         eta_sec = self.iter_timer.seconds() * (
             self.MAX_EPOCH - (cur_epoch * self.epoch_iters + cur_iter + 1)
@@ -684,7 +687,7 @@ class ValMeter(object):
             cur_epoch (int): the number of current epoch.
             cur_iter (int): the number of current iteration.
         """
-        if (cur_iter + 1) % self._cfg.LOGS.PERIOD != 0:
+        if (cur_iter + 1) % self._cfg.LOGS.PERIOD != 0 and cur_iter != 0:
             return
         eta_sec = self.iter_timer.seconds() * (self.max_iter - cur_iter - 1)
         eta = str(datetime.timedelta(seconds=int(eta_sec)))

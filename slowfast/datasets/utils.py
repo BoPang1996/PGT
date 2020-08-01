@@ -9,6 +9,7 @@ from collections import defaultdict
 import cv2
 import torch
 from fvcore.common.file_io import PathManager
+from slowfast.utils.setup_moxing_env import wrap_input_path2
 
 from . import transform as transform
 
@@ -30,6 +31,7 @@ def retry_load_images(image_paths, retry=10, backend="pytorch"):
     for i in range(retry):
         imgs = []
         for image_path in image_paths:
+            image_path = wrap_input_path2(image_path)
             with PathManager.open(image_path, "rb") as f:
                 img_str = np.frombuffer(f.read(), np.uint8)
                 img = cv2.imdecode(img_str, flags=cv2.IMREAD_COLOR)

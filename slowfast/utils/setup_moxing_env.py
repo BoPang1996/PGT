@@ -31,12 +31,12 @@ def wrap_input_path(module, func_name, tmp_dir="/cache/", copy_method="file"):
     origin_func = getattr(module, func_name)
 
     def wrapped_func(input_path, *args, **kwargs):
-        if input_path.startswith("s3://"):
+        if input_path.startswith("obs://"):
             import moxing as mox
             import slowfast.utils.mox_patch_0603
             mox.file.shift("os", "mox")
 
-            relative_path = os.path.join("s3/", input_path[5:])
+            relative_path = os.path.join("obs/", input_path[6:])
             local_path = os.path.join(tmp_dir, relative_path)
             local_dir, _ = os.path.split(local_path)
             os.makedirs(local_dir, exist_ok=True)
@@ -55,7 +55,7 @@ def wrap_output_path(module, func_name, tmp_dir="/cache/"):
     origin_func = getattr(module, func_name)
 
     def wrapped_func(data, output_path, *args, **kwargs):
-        if isinstance(output_path, six.string_types) and output_path.startswith("s3://"):
+        if isinstance(output_path, six.string_types) and output_path.startswith("obs://"):
             import moxing as mox
             import slowfast.utils.mox_patch_0603
             mox.file.shift("os", "mox")
@@ -72,12 +72,12 @@ def wrap_output_path(module, func_name, tmp_dir="/cache/"):
 
 
 def wrap_input_path2(input_path, tmp_dir="/cache/", copy_method="file"):
-    if input_path.startswith("s3://"):
+    if input_path.startswith("obs://"):
         import moxing as mox
         import slowfast.utils.mox_patch_0603
         mox.file.shift("os", "mox")
 
-        relative_path = os.path.join("s3/", input_path[5:])
+        relative_path = os.path.join("obs/", input_path[6:])
         local_path = os.path.join(tmp_dir, relative_path)
         local_dir, _ = os.path.split(local_path)
         os.makedirs(local_dir, exist_ok=True)

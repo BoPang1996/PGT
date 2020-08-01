@@ -1,0 +1,26 @@
+_BASE_: SLOW_8x8_R50_K400.yaml
+
+TRAIN:
+  BATCH_SIZE: 128
+  CHECKPOINT_FILE_PATH: obs://bucket-5006/data/slowfast/models/k400/SLOW_8x8_R50.pkl
+
+AVA:
+  FRAME_DIR: obs://bucket-5006/data/AVA/fair/frames
+  FRAME_LIST_DIR: obs://bucket-5006/data/AVA/fair/frame_lists
+  ANNOTATION_DIR: obs://bucket-5006/data/AVA/fair/annotations
+
+SOLVER:
+  BASE_LR: 0.2
+  WARMUP_START_LR: 0.00025
+
+TEST:
+  BATCH_SIZE: 16
+
+DATA_LOADER:
+  NUM_WORKERS: 4
+  PIN_MEMORY: False
+
+LOGS:
+  DIR: obs://bucket-5006/penggao/logs/progress-action/AVA/SLOW_16x8_R50_K400
+
+NUM_GPUS: 0

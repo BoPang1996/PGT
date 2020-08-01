@@ -4,7 +4,7 @@ import os
 import sys
 import stat
 import subprocess
-import moxing.pytorch as mox
+import moxing as mox
 mox.file.shift("os", "mox")
 
 
@@ -21,7 +21,7 @@ def pip_install_directory(local_dir_path):
 
 
 if __name__ == "__main__":
-    PIP_S3_PATH = "s3://bucket-5006/penggao/pip_packages"
+    PIP_S3_PATH = "obs://bucket-5006/penggao/pip_packages"
     PIP_LOCAL_PATH = "/cache/pip_packages"
     # subprocess.call([sys.executable, "-m", "pip", "uninstall", "-y", "python3-protobuf", "protobuf"])
     subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
