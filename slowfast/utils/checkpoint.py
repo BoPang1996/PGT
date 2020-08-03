@@ -132,7 +132,7 @@ def save_checkpoint(path_to_job, model, optimizer, epoch, cfg):
     }
     # Write the checkpoint.
     path_to_checkpoint = get_path_to_checkpoint(path_to_job, epoch + 1)
-    with PathManager.open(path_to_checkpoint, "wb") as f:
+    with open(path_to_checkpoint, "wb") as f:
         torch.save(checkpoint, f)
     return path_to_checkpoint
 
@@ -207,7 +207,7 @@ def load_checkpoint(
     # Account for the DDP wrapper in the multi-gpu setting.
     ms = model.module if data_parallel else model
     if convert_from_caffe2:
-        with PathManager.open(path_to_checkpoint, "rb") as f:
+        with open(path_to_checkpoint, "rb") as f:
             caffe2_checkpoint = pickle.load(f, encoding="latin1")
         state_dict = OrderedDict()
         name_convert_func = get_name_convert_func()
@@ -264,7 +264,7 @@ def load_checkpoint(
         epoch = -1
     else:
         # Load the checkpoint on CPU to avoid GPU mem spike.
-        with PathManager.open(path_to_checkpoint, "rb") as f:
+        with open(path_to_checkpoint, "rb") as f:
             checkpoint = torch.load(f, map_location="cpu")
         model_state_dict_3d = (
             model.module.state_dict() if data_parallel else model.state_dict()

@@ -293,6 +293,9 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
 
     val_meter.reset()
 
+    if cfg.PGT.ENABLE:
+        pgt.remove_hook()
+
 
 def calculate_and_update_precise_bn(loader, model, num_iters=200):
     """

@@ -49,7 +49,7 @@ class AVAMeter(object):
     Measure the AVA train, val, and test stats.
     """
 
-    def __init__(self, overall_iters, cfg, mode, tblogger):
+    def __init__(self, overall_iters, cfg, mode, tblogger=None):
         """
             overall_iters (int): the overall number of iterations of one epoch.
             cfg (CfgNode): configs.
@@ -96,7 +96,7 @@ class AVAMeter(object):
             return
 
         eta_sec = self.iter_timer.seconds() * (
-            self.MAX_EPOCH - (cur_epoch * self.epoch_iters + cur_iter + 1)
+            self.MAX_EPOCH - (cur_epoch * self.overall_iters + cur_iter + 1)
         )
         eta = str(datetime.timedelta(seconds=int(eta_sec)))
         if self.mode == "train":

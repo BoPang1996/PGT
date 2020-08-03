@@ -304,7 +304,7 @@ def get_class_names(path, parent_path=None, subset_path=None):
             subset file.
     """
     try:
-        with PathManager.open(path, "r") as f:
+        with open(path, "r") as f:
             class2idx = json.load(f)
     except Exception as err:
         print("Fail to load file from {} with error {}".format(path, err))
@@ -319,7 +319,7 @@ def get_class_names(path, parent_path=None, subset_path=None):
     class_parent = None
     if parent_path is not None and parent_path != "":
         try:
-            with PathManager.open(parent_path, "r") as f:
+            with open(parent_path, "r") as f:
                 d_parent = json.load(f)
         except EnvironmentError as err:
             print(
@@ -338,7 +338,7 @@ def get_class_names(path, parent_path=None, subset_path=None):
     subset_ids = None
     if subset_path is not None and subset_path != "":
         try:
-            with PathManager.open(subset_path, "r") as f:
+            with open(subset_path, "r") as f:
                 subset = f.read().split("\n")
                 subset_ids = [
                     class2idx[name]

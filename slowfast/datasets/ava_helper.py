@@ -36,7 +36,7 @@ def load_image_lists(cfg, is_train):
     video_name_to_idx = {}
     video_idx_to_name = []
     for list_filename in list_filenames:
-        with PathManager.open(list_filename, "r") as f:
+        with open(list_filename, "r") as f:
             f.readline()
             for i, line in enumerate(f):
                 if cfg.DEBUG and i > 10000:
@@ -98,7 +98,7 @@ def load_boxes_and_labels(cfg, mode):
     count = 0
     unique_box_count = 0
     for filename, is_gt_box in zip(ann_filenames, ann_is_gt_box):
-        with PathManager.open(filename, "r") as f:
+        with open(filename, "r") as f:
             for i, line in enumerate(f):
                 if cfg.DEBUG and i > 10000:
                     break

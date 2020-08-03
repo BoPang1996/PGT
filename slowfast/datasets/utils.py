@@ -32,7 +32,7 @@ def retry_load_images(image_paths, retry=10, backend="pytorch"):
         imgs = []
         for image_path in image_paths:
             image_path = wrap_input_path2(image_path)
-            with PathManager.open(image_path, "rb") as f:
+            with open(image_path, "rb") as f:
                 img_str = np.frombuffer(f.read(), np.uint8)
                 img = cv2.imdecode(img_str, flags=cv2.IMREAD_COLOR)
             imgs.append(img)
@@ -225,7 +225,7 @@ def load_image_lists(frame_list_file, prefix="", return_list=False, debug=False)
     """
     image_paths = defaultdict(list)
     labels = defaultdict(list)
-    with PathManager.open(frame_list_file, "r") as f:
+    with open(frame_list_file, "r") as f:
         assert f.readline().startswith("original_vido_id")
         for i, line in enumerate(f):
             if debug and i > 1000:

@@ -53,10 +53,13 @@ def parse_args():
         default="configs/Kinetics/SLOWFAST_4x16_R50.yaml",
         type=str,
     )
+    # moxing setting
+    parser.add_argument("--rank", help="Used by model arts", default=0, type=int)
+    parser.add_argument("--world_size", help="Used by model arts", default=1, type=int)
     # no use args
-    parser.add_argument("--data_url", help="No use", default=None, type=str)
-    parser.add_argument("--train_url", help="No use", default=None, type=str)
-    parser.add_argument("--lr", help="No use", default=None, type=float)
+    parser.add_argument("--data_url", help="No use", type=str)
+    parser.add_argument("--train_url", help="No use", type=str)
+    parser.add_argument("--lr", help="No use", type=float)
     # options
     parser.add_argument(
         "opts",
@@ -93,6 +96,9 @@ def load_config(args):
         cfg.RNG_SEED = args.rng_seed
     if hasattr(args, "output_dir"):
         cfg.LOGS.DIR = args.output_dir
+    if hasattr(args, "world_size") and hasattr(args, "rank"):
+        cfg.NUM_SHARDS = args.world_size
+        cfg.SHARD_ID = args.rank
 
     # Create the checkpoint dir.
     cu.make_checkpoint_dir(cfg.LOGS.DIR)

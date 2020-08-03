@@ -87,7 +87,7 @@ class Ssv2(torch.utils.data.Dataset):
         self._path_to_videos = []
         self._labels = []
         self._spatial_temporal_idx = []
-        with PathManager.open(path_to_file, "r") as f:
+        with open(path_to_file, "r") as f:
             for clip_idx, path_label in enumerate(f.read().splitlines()):
                 assert len(path_label.split()) == 2
                 path, label = path_label.split()
