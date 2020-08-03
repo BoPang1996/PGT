@@ -218,7 +218,7 @@ _C.MODEL.NUM_CLASSES = 400
 _C.MODEL.LOSS_FUNC = "cross_entropy"
 
 # Model architectures that has one single pathway.
-_C.MODEL.SINGLE_PATHWAY_ARCH = ["c2d", "c2d_nopool", "i3d", "i3d_nopool", "slow", "x3d", "r3d"]
+_C.MODEL.SINGLE_PATHWAY_ARCH = ["c2d", "c2d_nopool", "i3d", "i3d_nopool", "slow", "r3d"]
 
 # Model architectures that has multiple pathways.
 _C.MODEL.MULTI_PATHWAY_ARCH = ["slowfast"]
@@ -449,7 +449,7 @@ _C.DETECTION = CfgNode()
 # Whether enable video detection.
 _C.DETECTION.ENABLE = False
 
-# Aligned version of RoI. More details can be found at slowfast/models/head_helper.py
+# (deprecated) Aligned version of RoI. More details can be found at slowfast/models/head_helper.py
 _C.DETECTION.ALIGNED = True
 
 # Spatial scale factor.

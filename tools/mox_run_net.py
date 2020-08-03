@@ -8,10 +8,25 @@ import moxing as mox
 mox.file.shift("os", "mox")
 
 
+def compile_custom():
+    FNULL = open(os.devnull, 'w')
+    class sys_cd:
+        """Context manager for changing the current working directory"""
+        def __init__(self, newPath):
+            self.newPath = os.path.expanduser(newPath)
+        def __enter__(self):
+            self.savedPath = os.getcwd()
+            os.chdir(self.newPath)
+        def __exit__(self, etype, value, traceback):
+            os.chdir(self.savedPath)
+    with sys_cd("progress-action"):
+        subprocess.call([sys.executable, "setup.py", "build", "develop"])
+
+
 def pip_install(package):
     FNULL = open(os.devnull, 'w')
-    subprocess.call([sys.executable, "-m", "pip", "install", package], 
-        stdout=FNULL, stderr=subprocess.STDOUT)
+    subprocess.call([sys.executable, "-m", "pip", "install", package],
+                    stdout=FNULL, stderr=subprocess.STDOUT)
 
 
 def pip_install_directory(local_dir_path):
@@ -21,9 +36,12 @@ def pip_install_directory(local_dir_path):
 
 
 if __name__ == "__main__":
+    compile_custom()
+    print("Compile custom CUDA layers finished!")
+
+    # TODO: set as config
     PIP_S3_PATH = "obs://bucket-5006/penggao/pip_packages"
     PIP_LOCAL_PATH = "/cache/pip_packages"
-    # subprocess.call([sys.executable, "-m", "pip", "uninstall", "-y", "python3-protobuf", "protobuf"])
     subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
     subprocess.call([sys.executable, "-m", "pip", "install", "--ignore-installed", "PyYAML"])
     mox.file.copy_parallel(PIP_S3_PATH, PIP_LOCAL_PATH)

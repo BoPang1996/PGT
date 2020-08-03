@@ -15,7 +15,6 @@ def get_trans_func(name):
     trans_funcs = {
         "basic_transform": BasicTransform,
         "bottleneck_transform": BottleneckTransform,
-        "x3d_transform": X3DBottleneckTransform,
     }
     assert (
         name in trans_funcs.keys()
@@ -239,70 +238,6 @@ class BottleneckTransform(nn.Module):
         x = self.c(x)
         x = self.c_bn(x)
         return x
-
-
-class X3DBottleneckTransform(BottleneckTransform):
-    """
-    Bottleneck transformation: 1x1x1, 3x3x3, 1x1x1, where T is the size of
-        temporal kernel.
-    """
-
-    def _construct(
-        self,
-        dim_in,
-        dim_out,
-        stride,
-        dim_inner,
-        num_groups,
-        dilation,
-        norm_module,
-    ):
-        (str1x1, str3x3) = (stride, 1) if self._stride_1x1 else (1, stride)
-
-        # 1x1x1, BN, ReLU.
-        self.a = nn.Conv3d(
-            dim_in,
-            dim_inner,
-            kernel_size=[1, 1, 1],
-            stride=[str1x1, str1x1, str1x1],
-            padding=[0, 0, 0],
-            bias=False,
-        )
-        self.a_bn = norm_module(
-            num_features=dim_inner, eps=self._eps, momentum=self._bn_mmt
-        )
-        self.a_relu = nn.ReLU(inplace=self._inplace_relu)
-
-        # channel-wise 3x3x3, BN, ReLU.
-        # TODO: passing num_groups as variable
-        self.b = nn.Conv3d(
-            dim_inner,
-            dim_inner,
-            [self.temp_kernel_size, 3, 3],
-            stride=[1, str3x3, str3x3],
-            padding=[int(self.temp_kernel_size // 2), dilation, dilation],
-            groups=dim_inner,
-            bias=False,
-            dilation=[1, dilation, dilation],
-        )
-        self.b_bn = norm_module(
-            num_features=dim_inner, eps=self._eps, momentum=self._bn_mmt
-        )
-        self.b_relu = nn.ReLU(inplace=self._inplace_relu)
-
-        # 1x1x1, BN.
-        self.c = nn.Conv3d(
-            dim_inner,
-            dim_out,
-            kernel_size=[1, 1, 1],
-            stride=[1, 1, 1],
-            padding=[0, 0, 0],
-            bias=False,
-        )
-        self.c_bn = norm_module(
-            num_features=dim_out, eps=self._eps, momentum=self._bn_mmt
-        )
-        self.c_bn.transform_final_bn = True
 
 
 class ResBlock(nn.Module):
