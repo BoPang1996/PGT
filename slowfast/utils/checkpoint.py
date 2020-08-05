@@ -406,7 +406,7 @@ def load_test_checkpoint(cfg, model):
             cfg.NUM_GPUS > 1,
             None,
             inflation=False,
-            convert_from_caffe2=cfg.TRAIN.CHECKPOINT_TYPE == "caffe2",
+            convert_from_caffe2=cfg.TEST.CHECKPOINT_TYPE == "caffe2",
         )
     elif has_checkpoint(cfg.LOGS.DIR):
         last_checkpoint = get_last_checkpoint(cfg.LOGS.DIR)

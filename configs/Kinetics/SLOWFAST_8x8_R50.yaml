@@ -13,8 +13,8 @@ DATA:
   TRAIN_CROP_SIZE: 224
   TEST_CROP_SIZE: 256
   INPUT_CHANNEL_NUM: [3, 3]
-  PATH_TO_DATA_DIR: data/kinetics
-  PATH_PREFIX: data/kinetics
+  PATH_TO_DATA_DIR: /home/pg/data/Kinetics_400/
+  PATH_PREFIX: /home/pg/data/Kinetics_400/
 
 SLOWFAST:
   ALPHA: 4

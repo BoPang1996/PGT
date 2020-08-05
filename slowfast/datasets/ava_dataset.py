@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
-import logging
 import numpy as np
 import torch
 
@@ -10,8 +9,9 @@ from . import cv2_transform as cv2_transform
 from . import transform as transform
 from . import utils as utils
 from .build import DATASET_REGISTRY
+import slowfast.utils.logging as logging
 
-logger = logging.getLogger(__name__)
+logger = logging.get_logger(__name__)
 
 
 @DATASET_REGISTRY.register()

@@ -38,6 +38,7 @@ class ResNet(nn.Module):
         self.norm_module = get_norm(cfg)
         self.enable_detection = cfg.DETECTION.ENABLE
         self.num_pathways = 1
+        self._cfg = cfg
         self._construct_network(cfg)
         init_helper.init_weights(
             self, cfg.MODEL.FC_INIT_STD, cfg.RESNET.ZERO_INIT_FINAL_BN
@@ -191,10 +192,16 @@ class ResNet(nn.Module):
             )
         
         # input shape of each temporal layer, [channel, spatial stride]
-        # FIXME: support i3d and more
-        self.padding_shape = [*[[width_per_group * 8, 8]] * 1,
-                              *[[width_per_group * 16, 16]] * d4,
-                              *[[width_per_group * 32, 32]] * (d5 - 1),]
+        if self._cfg.MODEL.ARCH == "slow":
+            # FIXME: use variable to compute
+            if self.enable_detection:
+                self.padding_shape = [*[[width_per_group * 8, 8]] * 1,
+                                    *[[width_per_group * 16, 16]] * d4,
+                                    *[[width_per_group * 32, 16]] * (d5 - 1),]
+            else:
+                self.padding_shape = [*[[width_per_group * 8, 8]] * 1,
+                                    *[[width_per_group * 16, 16]] * d4,
+                                    *[[width_per_group * 32, 32]] * (d5 - 1),]
 
     def forward(self, x, bboxes=None):
         x = self.s1(x)
