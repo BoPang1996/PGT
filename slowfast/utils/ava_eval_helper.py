@@ -38,12 +38,14 @@ import time
 from collections import defaultdict
 from fvcore.common.file_io import PathManager
 
+import slowfast.utils.logging as logging
 from slowfast.utils.ava_evaluation import (
     object_detection_evaluation,
     standard_fields,
 )
+from slowfast.utils.setup_moxing_env import wrap_input_path2
 
-logger = logging.getLogger(__name__)
+logger = logging.get_logger(__name__)
 
 
 def make_image_key(video_id, timestamp):
@@ -70,6 +72,7 @@ def read_csv(csv_file, class_whitelist=None, load_score=False):
     boxes = defaultdict(list)
     labels = defaultdict(list)
     scores = defaultdict(list)
+    csv_file = wrap_input_path2(csv_file)
     with open(csv_file, "r") as f:
         reader = csv.reader(f)
         for row in reader:
@@ -98,6 +101,7 @@ def read_exclusions(exclusions_file):
     """
     excluded = set()
     if exclusions_file:
+        exclusions_file = wrap_input_path2(exclusions_file)
         with open(exclusions_file, "r") as f:
             reader = csv.reader(f)
             for row in reader:
@@ -114,6 +118,7 @@ def read_labelmap(labelmap_file):
     name = ""
     class_id = ""
     with open(labelmap_file, "r") as f:
+        labelmap_file = wrap_input_path2(labelmap_file)
         for line in f:
             if line.startswith("  name:"):
                 name = line.split('"')[1]

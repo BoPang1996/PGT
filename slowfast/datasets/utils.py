@@ -223,6 +223,7 @@ def load_image_lists(frame_list_file, prefix="", return_list=False, debug=False)
         labels (list or dict): list of list containing label of each frame.
             If return_list is False, then return in a dict form.
     """
+    frame_list_file = wrap_input_path2(frame_list_file)
     image_paths = defaultdict(list)
     labels = defaultdict(list)
     with open(frame_list_file, "r") as f:

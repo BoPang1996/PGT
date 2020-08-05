@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
-import logging
 import os
 from collections import defaultdict
 from fvcore.common.file_io import PathManager
 
-logger = logging.getLogger(__name__)
+import slowfast.utils.logging as logging
+from slowfast.utils.setup_moxing_env import wrap_input_path2
+
+logger = logging.get_logger(__name__)
 
 FPS = 30
 AVA_VALID_FRAMES = range(902, 1799)
@@ -36,6 +38,7 @@ def load_image_lists(cfg, is_train):
     video_name_to_idx = {}
     video_idx_to_name = []
     for list_filename in list_filenames:
+        list_filename = wrap_input_path2(list_filename)
         with open(list_filename, "r") as f:
             f.readline()
             for i, line in enumerate(f):
@@ -98,6 +101,7 @@ def load_boxes_and_labels(cfg, mode):
     count = 0
     unique_box_count = 0
     for filename, is_gt_box in zip(ann_filenames, ann_is_gt_box):
+        filename = wrap_input_path2(filename)
         with open(filename, "r") as f:
             for i, line in enumerate(f):
                 if cfg.DEBUG and i > 10000:
