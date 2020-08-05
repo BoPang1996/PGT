@@ -31,7 +31,6 @@ from __future__ import (
 )
 import os
 import csv
-import logging
 import numpy as np
 import pprint
 import time
@@ -196,7 +195,7 @@ def run_evaluation(
 
     for image_key in boxes:
         if image_key in excluded_keys:
-            logging.info(
+            logger.info(
                 (
                     "Found excluded timestamp in ground truth: %s. "
                     "It will be ignored."
@@ -225,7 +224,7 @@ def run_evaluation(
 
     for image_key in boxes:
         if image_key in excluded_keys:
-            logging.info(
+            logger.info(
                 (
                     "Found excluded timestamp in detections: %s. "
                     "It will be ignored."

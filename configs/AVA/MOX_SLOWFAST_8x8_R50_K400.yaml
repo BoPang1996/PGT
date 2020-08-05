@@ -24,4 +24,3 @@ LOGS:
   DIR: obs://bucket-5006/penggao/logs/progress-action/AVA/SLOWFAST_8x8_R50_K400
 
 NUM_GPUS: 8
-NUM_SHARDS: 2

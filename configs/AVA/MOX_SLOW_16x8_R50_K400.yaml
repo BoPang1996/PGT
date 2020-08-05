@@ -1,7 +1,7 @@
-_BASE_: SLOW_8x8_R50_K400.yaml
+_BASE_: SLOW_16x8_R50_K400.yaml
 
 TRAIN:
-  BATCH_SIZE: 256
+  BATCH_SIZE: 128
   CHECKPOINT_FILE_PATH: obs://bucket-5006/data/slowfast/models/k400/SLOW_8x8_R50.pkl
 
 AVA:
@@ -10,8 +10,8 @@ AVA:
   ANNOTATION_DIR: obs://bucket-5006/data/AVA/fair/annotations
 
 SOLVER:
-  BASE_LR: 0.4
-  WARMUP_START_LR: 0.0005
+  BASE_LR: 0.2
+  WARMUP_START_LR: 0.00025
 
 TEST:
   BATCH_SIZE: 8
@@ -21,6 +21,6 @@ DATA_LOADER:
   PIN_MEMORY: False
 
 LOGS:
-  DIR: obs://bucket-5006/penggao/logs/progress-action/AVA/MOX_SLOW_8x8_R50_K400
+  DIR: obs://bucket-5006/penggao/logs/progress-action/AVA/MOX_SLOW_16x8_R50_K400
 
 NUM_GPUS: 8
