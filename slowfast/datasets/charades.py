@@ -200,12 +200,23 @@ class Charades(torch.utils.data.Dataset):
             )
         )
 
-        label = utils.aggregate_labels(
-            [self._labels[index][i] for i in range(seq[0], seq[-1] + 1)]
-        )
-        label = torch.as_tensor(
-            utils.as_binary_vector(label, self.cfg.MODEL.NUM_CLASSES)
-        )
+        if self.cfg.PGT.ENABLE and self.mode == "train":
+            step = self.cfg.PGT.STEP_LEN
+            label = [
+                utils.aggregate_labels(self._labels[index][seq[i]:seq[i+step-1]+1])
+                for i in range(0, len(seq) - 1, step - 1)
+            ]
+            label = torch.as_tensor(
+                [utils.as_binary_vector(l, self.cfg.MODEL.NUM_CLASSES)
+                 for l in label]
+            )
+        else:
+            label = utils.aggregate_labels(
+                [self._labels[index][i] for i in range(seq[0], seq[-1] + 1)]
+            )
+            label = torch.as_tensor(
+                utils.as_binary_vector(label, self.cfg.MODEL.NUM_CLASSES)
+            )
 
         # Perform color normalization.
         frames = utils.tensor_normalize(

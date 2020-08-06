@@ -196,8 +196,14 @@ _C.PGT.STEP_LEN = 8
 # Whether to use progress self attention. FIXME: duplicate with SELFATT_LOCATION.
 _C.PGT.SELFATT = False
 
-# Progressive self attention location.
+# Progress self attention location.
 _C.PGT.SELFATT_LOCATION = [0, 0, 0, 0]
+
+# Progress evaluation.
+_C.PGT.PG_EVAL = False
+
+# Ensemble method for progress evaluation.
+_C.PGT.ENSEMBLE_METHOD = "avg"
 
 
 # -----------------------------------------------------------------------------
@@ -231,6 +237,9 @@ _C.MODEL.FC_INIT_STD = 0.01
 
 # Activation layer for the output head.
 _C.MODEL.HEAD_ACT = "softmax"
+
+# Type of final spatial and temporal pooling layer. Options are "avg" and "max".
+_C.MODEL.FINAL_POOL = ["avg", "avg"]
 
 
 # -----------------------------------------------------------------------------

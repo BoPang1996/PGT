@@ -94,7 +94,7 @@ def train_epoch(
             optimizer.step()
         else:
             if cfg.DETECTION.ENABLE:
-                raise NotImplementedError()
+                preds, loss = pgt.step_train(inputs, labels, meta["boxes"])
 
             else:
                 preds, loss = pgt.step_train(inputs, labels)
@@ -218,7 +218,7 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
             if not cfg.PGT.ENABLE:
                 preds = model(inputs, meta["boxes"])
             else:
-                raise NotImplementedError()
+                preds = pgt.step_eval(inputs, meta["boxes"])
 
             preds = preds.cpu()
             ori_boxes = meta["ori_boxes"].cpu()
@@ -347,9 +347,12 @@ def build_trainer(cfg):
     # Create the video train and val loaders.
     train_loader = loader.construct_loader(cfg, "train")
     val_loader = loader.construct_loader(cfg, "val")
-    precise_bn_loader = loader.construct_loader(
-        cfg, "train", is_precise_bn=True
-    )
+    if cfg.BN.USE_PRECISE_STATS and len(get_bn_modules(model)) > 0:
+        precise_bn_loader = loader.construct_loader(
+            cfg, "train", is_precise_bn=True
+        )
+    else:
+        precise_bn_loader = None
     # Create meters.
     train_meter = TrainMeter(len(train_loader), cfg)
     val_meter = ValMeter(len(val_loader), cfg)
@@ -404,9 +407,12 @@ def train(cfg):
     # Create the video train and val loaders.
     train_loader = loader.construct_loader(cfg, "train")
     val_loader = loader.construct_loader(cfg, "val")
-    precise_bn_loader = loader.construct_loader(
-        cfg, "train", is_precise_bn=True
-    )
+    if cfg.BN.USE_PRECISE_STATS and len(get_bn_modules(model)) > 0:
+        precise_bn_loader = loader.construct_loader(
+            cfg, "train", is_precise_bn=True
+        )
+    else:
+        precise_bn_loader = None
 
     # Create meters.
     if du.is_master_proc():
