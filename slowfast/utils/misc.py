@@ -166,9 +166,8 @@ def log_model_info(model, cfg, use_train_input=True):
             get_model_stats(model, cfg, "activation", use_train_input)
         )
     )
-    if cfg.DEBUG:
-        logger.info("nvidia-smi")
-        os.system("nvidia-smi")
+    logger.info("nvidia-smi")
+    os.system("nvidia-smi")
 
 
 def is_eval_epoch(cfg, cur_epoch, multigrid_schedule):
