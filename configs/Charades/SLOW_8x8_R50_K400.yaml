@@ -1,0 +1,79 @@
+TRAIN:
+  ENABLE: True
+  DATASET: charades
+  BATCH_SIZE: 32
+  EVAL_PERIOD: 1
+  CHECKPOINT_PERIOD: 1
+  AUTO_RESUME: True
+  CHECKPOINT_TYPE: caffe2
+  CHECKPOINT_FILE_PATH: /home/pg/data/models/k400/SLOW_8x8_R50.pkl
+
+DATA:
+  NUM_FRAMES: 8
+  SAMPLING_RATE: 8
+  TRAIN_JITTER_SCALES: [256, 320]
+  TRAIN_CROP_SIZE: 224
+  TEST_CROP_SIZE: 256
+  INPUT_CHANNEL_NUM: [3]
+  MULTI_LABEL: True
+  INV_UNIFORM_SAMPLE: True
+  ENSEMBLE_METHOD: max
+  REVERSE_INPUT_CHANNEL: True
+  PATH_TO_DATA_DIR: /home/pg/data/Charades/
+  PATH_PREFIX: /home/pg/data/Charades/Charades_v1_rgb
+
+RESNET:
+  ZERO_INIT_FINAL_BN: True
+  WIDTH_PER_GROUP: 64
+  NUM_GROUPS: 1
+  DEPTH: 50
+  TRANS_FUNC: bottleneck_transform
+  STRIDE_1X1: False
+  NUM_BLOCK_TEMP_KERNEL: [[3], [4], [6], [3]]
+
+NONLOCAL:
+  LOCATION: [[[]], [[]], [[]], [[]]]
+
+BN:
+  USE_PRECISE_STATS: False
+  WEIGHT_DECAY: 0.0
+  NORM_TYPE: frozen_batchnorm
+
+SOLVER:
+  BASE_LR: 0.075
+  LR_POLICY: steps_with_relative_lrs
+  LRS: [1, 0.1, 0.01]
+  STEPS: [0, 20, 30]
+  MAX_EPOCH: 35
+  MOMENTUM: 0.9
+  WEIGHT_DECAY: 1e-4
+  WARMUP_EPOCHS: 4.0
+  WARMUP_START_LR: 0.0002
+  OPTIMIZING_METHOD: sgd
+
+MODEL:
+  NUM_CLASSES: 157
+  ARCH: slow
+  MODEL_NAME: ResNet
+  LOSS_FUNC: bce_logit
+  HEAD_ACT: sigmoid
+  DROPOUT_RATE: 0.5
+  FINAL_POOL: ["avg", "max"]
+
+TEST:
+  ENABLE: True
+  DATASET: charades
+  BATCH_SIZE: 32
+  NUM_ENSEMBLE_VIEWS: 10
+  NUM_SPATIAL_CROPS: 3
+
+DATA_LOADER:
+  NUM_WORKERS: 4
+  PIN_MEMORY: True
+
+LOGS:
+  DIR: logs/Charades/SLOW_8x8_R50_K400/
+
+NUM_GPUS: 2
+NUM_SHARDS: 1
+RNG_SEED: 0

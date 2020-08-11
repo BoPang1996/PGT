@@ -42,7 +42,7 @@ from slowfast.utils.ava_evaluation import (
     object_detection_evaluation,
     standard_fields,
 )
-from slowfast.utils.setup_moxing_env import wrap_input_path2
+from slowfast.utils.setup_moxing_env import wrap_input_path2, wrap_output_path2
 
 logger = logging.get_logger(__name__)
 
@@ -167,9 +167,9 @@ def evaluate_ava(
         "Evaluating with %d unique detection frames" % len(detections[0])
     )
 
-    write_results(detections, os.path.join(
+    wrap_output_path2(write_results, detections, os.path.join(
         log_dir, "detections_%s.csv" % name))
-    write_results(groundtruth, os.path.join(
+    wrap_output_path2(write_results, groundtruth, os.path.join(
         log_dir, "groundtruth_%s.csv" % name))
 
     results = run_evaluation(categories, groundtruth,

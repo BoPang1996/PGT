@@ -143,6 +143,7 @@ class ResNetBasicHead(nn.Module):
         dim_in,
         num_classes,
         pool_size,
+        pool_type=["avg", "avg"],
         dropout_rate=0.0,
         act_func="softmax",
     ):
@@ -171,11 +172,25 @@ class ResNetBasicHead(nn.Module):
         self.num_pathways = len(pool_size)
 
         for pathway in range(self.num_pathways):
-            if pool_size[pathway] is None:
-                avg_pool = nn.AdaptiveAvgPool3d((1, 1, 1))
-            else:
-                avg_pool = nn.AvgPool3d(pool_size[pathway], stride=1)
-            self.add_module("pathway{}_avgpool".format(pathway), avg_pool)
+            if pool_type[0] == "avg":
+                spatial_pool = nn.AvgPool3d(
+                    [1, pool_size[pathway][1], pool_size[pathway][2]], stride=1
+                )
+            elif pool_type[0] == "max":
+                spatial_pool = nn.MaxPool3d(
+                    [1, pool_size[pathway][1], pool_size[pathway][2]], stride=1
+                )
+            self.add_module("s{}_spool".format(pathway), spatial_pool)
+
+            if pool_type[1] == "avg":
+                temporal_pool = nn.AvgPool3d(
+                    [pool_size[pathway][0], 1, 1], stride=1
+                )
+            elif pool_type[1] == "max":
+                temporal_pool = nn.MaxPool3d(
+                    [pool_size[pathway][0], 1, 1], stride=1
+                )
+            self.add_module("s{}_tpool".format(pathway), temporal_pool)
 
         if dropout_rate > 0.0:
             self.dropout = nn.Dropout(dropout_rate)
@@ -200,8 +215,9 @@ class ResNetBasicHead(nn.Module):
         ), "Input tensor does not contain {} pathway".format(self.num_pathways)
         pool_out = []
         for pathway in range(self.num_pathways):
-            m = getattr(self, "pathway{}_avgpool".format(pathway))
-            pool_out.append(m(inputs[pathway]))
+            s_pool = getattr(self, "s{}_spool".format(pathway))
+            t_pool = getattr(self, "s{}_tpool".format(pathway))
+            pool_out.append(t_pool(s_pool(inputs[pathway])))
         x = torch.cat(pool_out, 1)
         # (N, C, T, H, W) -> (N, T, H, W, C).
         x = x.permute((0, 2, 3, 4, 1))

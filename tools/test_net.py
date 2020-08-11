@@ -76,7 +76,7 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None):
             if not cfg.PGT.ENABLE:
                 preds = model(inputs, meta["boxes"])
             else:
-                raise NotImplementedError()
+                preds = pgt.step_eval(inputs, meta["boxes"])
             preds = preds.cpu()
             ori_boxes = meta["ori_boxes"].cpu()
             metadata = meta["metadata"].cpu()

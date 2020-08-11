@@ -1,9 +1,11 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import slowfast.utils.misc as misc
 import torch.nn.parallel.distributed as dist
+
+import slowfast.utils.misc as misc
 import slowfast.models.optimizer as optim
+from slowfast.models.head_helper import ResNetBasicHead, ResNetRoIHead
 
 
 class PGT(object):
@@ -22,18 +24,17 @@ class PGT(object):
         self.hook_handles = []
         self.register_hook()
 
-        # Final average pooling
+        # pooling
         pg_pool = nn.AdaptiveAvgPool3d((1, 1, 1))
-        if isinstance(self.model, dist.DistributedDataParallel):
-            if hasattr(self.model.module, 'avgpool'):  # for regnet
-                self.model.module.avgpool = pg_pool
-            else:
-                self.model.module.head.pathway0_avgpool = pg_pool
-        else:
-            if hasattr(self.model, 'avgpool'):
-                self.model.avgpool = pg_pool
-            else:
-                self.model.head.pathway0_avgpool = pg_pool
+        if cfg.MODEL.FINAL_POOL[1] == "avg":
+            t_pool = nn.AdaptiveAvgPool3d((1, None, None))
+        elif cfg.MODEL.FINAL_POOL[1] == "max":
+            t_pool = nn.AdaptiveMaxPool3d((1, None, None))
+        ms = self.model.module if cfg.NUM_GPUS > 1 else self.model
+        if isinstance(ms.head, (ResNetRoIHead, ResNetBasicHead)):
+            ms.head.s0_tpool = t_pool
+        else:  # regnet
+            ms.avgpool = pg_pool
 
         # For PrgSelfATT padding
         if self.cfg.PGT.SELFATT:
@@ -114,7 +115,7 @@ class PGT(object):
                                         w // shape[1])).cuda())
         return padding
 
-    def step_train(self, inputs, labels):
+    def step_train(self, inputs, labels, bboxes=None):
         loss_mean = []
         preds = []
 
@@ -130,11 +131,20 @@ class PGT(object):
             self.padding_selfatt = self.inter_results_selfatt
             self.inter_results = []
             self.inter_results_selfatt = []
+            idx = i // (self.cfg.PGT.STEP_LEN - 1)
             progress_input = [inputs[0][:, :, i:i + self.cfg.PGT.STEP_LEN]]
 
             # Forward
-            pred = self.model(progress_input)
-            loss = self.loss_fun(pred, labels)
+            if bboxes != None:
+                pred = self.model(progress_input, bboxes)
+            else:
+                pred = self.model(progress_input)
+
+            if len(labels.size()) > 2:  # for charades
+                loss = self.loss_fun(pred, labels[:,idx])
+            else:  # for kinetics and ava
+                # FIXME: ava step labels
+                loss = self.loss_fun(pred, labels)
 
             # Check Nan Loss.
             misc.check_nan_losses(loss)
@@ -152,16 +162,48 @@ class PGT(object):
         loss_mean = torch.stack(loss_mean, dim=0).mean()
         return preds, loss_mean
 
-    def step_eval(self, inputs):
-        # remove inter results
-        self.inter_results = []
-        self.inter_results_selfatt = []
+    def step_eval(self, inputs, bboxes=None):
+        if not self.cfg.PGT.PG_EVAL:
+            # remove inter results
+            self.inter_results = []
+            self.inter_results_selfatt = []
 
-        # get frist padding
-        self.padding = [self.padding_fn(inputs[0]),
-                        self.padding_fn(inputs[0])]
+            # get frist padding
+            self.padding = [self.padding_fn(inputs[0]),
+                            self.padding_fn(inputs[0])]
 
-        preds = self.model(inputs)
+            if bboxes != None:
+                preds = self.model(inputs, bboxes)
+            else:
+                preds = self.model(inputs)
+
+        else:
+            preds = []
+
+            # get first padding
+            self.inter_results = self.padding_fn(inputs[0])
+            self.inter_results_selfatt = []
+            self.zero_padding = self.padding_fn(inputs[0])
+
+            # progress steps
+            for i in range(0, inputs[0].shape[2] - 1, self.cfg.PGT.STEP_LEN - 1):
+                self.padding = [self.inter_results.copy(), self.zero_padding.copy()]
+                self.padding_selfatt = self.inter_results_selfatt
+                self.inter_results = []
+                self.inter_results_selfatt = []
+                progress_input = [inputs[0][:, :, i:i + self.cfg.PGT.STEP_LEN]]
+
+                # forward
+                if bboxes != None:
+                    pred = self.model(progress_input, bboxes)
+                else:
+                    pred = self.model(progress_input)
+                preds.append(pred)
+
+            if self.cfg.PGT.ENSEMBLE_METHOD == "avg":
+                preds = torch.stack(preds, dim=1).mean(dim=1)
+            elif self.cfg.PGT.ENSEMBLE_METHOD == "max":
+                preds = torch.stack(preds, dim=1).max(dim=1)[0]
 
         return preds
 
