@@ -88,3 +88,17 @@ def wrap_input_path2(input_path, tmp_dir="/cache/", copy_method="file"):
         return local_path
     else:
         return input_path
+
+
+def wrap_output_path2(origin_func, data, output_path, *args, **kwargs):
+    if isinstance(output_path, six.string_types) and output_path.startswith("obs://"):
+        import moxing as mox
+        import slowfast.utils.mox_patch_0603
+        mox.file.shift("os", "mox")
+
+        with tempfile.NamedTemporaryFile(dir="/cache/") as f:
+            temp_path = f.name
+            origin_ret = origin_func(data, temp_path, *args, **kwargs)
+            mox.file.copy(temp_path, output_path)
+    else:
+        origin_ret = origin_func(data, output_path, *args, *kwargs)
