@@ -184,6 +184,7 @@ def load_checkpoint(
     inflation=False,
     convert_from_caffe2=False,
     strict_loading=False,
+    transfer_weight=True,
 ):
     """
     Load the checkpoint from the given file. If inflation is True, inflate the
@@ -197,6 +198,7 @@ def load_checkpoint(
         inflation (bool): if True, inflate the weights from the checkpoint.
         convert_from_caffe2 (bool): if True, load the model from caffe2 and
             convert it to pytorch.
+        transfer_weight (bool): if True, only load model weight.
     Returns:
         (int): the number of training epoch of the checkpoint.
     """
@@ -279,11 +281,37 @@ def load_checkpoint(
             )
             ms.load_state_dict(inflated_model_dict, strict=strict_loading)
         else:
-            ms.load_state_dict(checkpoint["model_state"])
+            state_dict = OrderedDict()
+            for key in checkpoint["model_state"].keys():
+                if key in ms.state_dict():
+                    ckpt_blob_shape = checkpoint["model_state"][key].shape
+                    model_blob_shape = ms.state_dict()[key].shape
+                    if ckpt_blob_shape == tuple(model_blob_shape):
+                        state_dict[key] = torch.tensor(
+                            checkpoint["model_state"][key]
+                        ).clone()
+                        # logger.info(
+                        #     "{}: {} => {}: {}".format(
+                        #         key,
+                        #         ckpt_blob_shape,
+                        #         key,
+                        #         tuple(model_blob_shape),
+                        #     )
+                        # )
+                    else:
+                        logger.warn(
+                            "!! {}: {} does not match {}: {}".format(
+                                key,
+                                ckpt_blob_shape,
+                                key,
+                                tuple(model_blob_shape),
+                            )
+                        )
+            ms.load_state_dict(state_dict, strict=strict_loading)
             # Load the optimizer state (commonly not done when fine-tuning)
-            if optimizer:
-                optimizer.load_state_dict(checkpoint["optimizer_state"])
-        if "epoch" in checkpoint.keys():
+            if optimizer and not transfer_weight:
+                optimizer.load_state_dict(checkpoint["optimizer"])
+        if "epoch" in checkpoint.keys() and not transfer_weight:
             epoch = checkpoint["epoch"]
         else:
             epoch = -1
@@ -453,6 +481,7 @@ def load_train_checkpoint(cfg, model, optimizer):
             optimizer,
             inflation=cfg.TRAIN.CHECKPOINT_INFLATE,
             convert_from_caffe2=cfg.TRAIN.CHECKPOINT_TYPE == "caffe2",
+            transfer_weight=cfg.TRAIN.CHECKPOINT_TRANSFER_WEIGHT,
         )
         start_epoch = checkpoint_epoch + 1
     else:
