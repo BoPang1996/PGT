@@ -18,9 +18,10 @@ import slowfast.utils.metrics as metrics
 import slowfast.utils.misc as misc
 from slowfast.datasets import loader
 from slowfast.models import build_model
-from slowfast.utils.meters import AVAMeter, TrainMeter, ValMeter
+from slowfast.utils.meters import AVAMeter, TrainMeter, ValMeter, TestMeter
 from slowfast.utils.multigrid import MultigridSchedule
 from slowfast.models.progress_helper import PGT
+from test_net import perform_test
 
 logger = logging.get_logger(__name__)
 
@@ -427,7 +428,18 @@ def train(cfg):
     else:
         # TODO: put tblogger outside
         train_meter = TrainMeter(len(train_loader), cfg, tblogger)
-        val_meter = ValMeter(len(val_loader), cfg, tblogger)
+        if cfg.TRAIN.FULL_TIME_EVAL:
+            val_meter = TestMeter(
+                len(val_loader.dataset) // (cfg.TEST.NUM_ENSEMBLE_VIEWS),
+                cfg.TEST.NUM_ENSEMBLE_VIEWS,
+                cfg.MODEL.NUM_CLASSES,
+                len(val_loader),
+                cfg.DATA.MULTI_LABEL,
+                cfg.DATA.ENSEMBLE_METHOD,
+                tblogger
+            )
+        else:
+            val_meter = ValMeter(len(val_loader), cfg, tblogger)
 
     # set up writer for logging to Tensorboard format.
     if cfg.TENSORBOARD.ENABLE and du.is_master_proc(
@@ -490,7 +502,10 @@ def train(cfg):
         if misc.is_eval_epoch(
             cfg, cur_epoch, None if multigrid is None else multigrid.schedule
         ):
-            eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer)
+            if cfg.TRAIN.FULL_TIME_EVAL:
+                perform_test(val_loader, model, val_meter, cfg, writer, cur_epoch)
+            else:
+                eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer)
 
     if writer is not None:
         writer.close()

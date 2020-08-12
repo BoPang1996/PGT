@@ -1,0 +1,26 @@
+_BASE_: SLOW_PROG_15x8_R50_K400.yaml
+
+TRAIN:
+  BATCH_SIZE: 64
+  CHECKPOINT_FILE_PATH: obs://bucket-5006/data/slowfast/models/k400/SLOW_8x8_R50.pkl
+
+DATA:
+  PATH_TO_DATA_DIR: obs://bucket-5006/data/Charades/
+  PATH_PREFIX: obs://bucket-5006/data/Charades/Charades_v1_rgb
+
+SOLVER:
+  BASE_LR: 0.15
+  WARMUP_START_LR: 0.0004
+
+TEST:
+  BATCH_SIZE: 8
+
+DATA_LOADER:
+  NUM_WORKERS: 4
+  PIN_MEMORY: False
+
+LOGS:
+  DIR: obs://bucket-5006/penggao/logs/progress-action/Chardes/MOX_SLOW_PROG_76x8_R50_K400
+
+NUM_GPUS: 8
+NUM_SHARDS: 2

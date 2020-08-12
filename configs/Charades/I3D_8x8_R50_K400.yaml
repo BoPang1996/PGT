@@ -3,11 +3,10 @@ TRAIN:
   DATASET: charades
   BATCH_SIZE: 32
   EVAL_PERIOD: 1
-  FULL_TIME_EVAL: True
   CHECKPOINT_PERIOD: 1
   AUTO_RESUME: True
   CHECKPOINT_TYPE: caffe2
-  CHECKPOINT_FILE_PATH: /home/pg/data/models/k400/SLOW_8x8_R50.pkl
+  CHECKPOINT_FILE_PATH: /home/pg/data/models/k400/I3D_8x8_R50.pkl
 
 DATA:
   NUM_FRAMES: 8
@@ -44,8 +43,8 @@ SOLVER:
   BASE_LR: 0.075
   LR_POLICY: steps_with_relative_lrs
   LRS: [1, 0.1, 0.01]
-  STEPS: [0, 20, 30]
-  MAX_EPOCH: 35
+  STEPS: [0, 11, 20]
+  MAX_EPOCH: 25
   MOMENTUM: 0.9
   WEIGHT_DECAY: 1e-4
   WARMUP_EPOCHS: 4.0
@@ -54,7 +53,7 @@ SOLVER:
 
 MODEL:
   NUM_CLASSES: 157
-  ARCH: slow
+  ARCH: i3d
   MODEL_NAME: ResNet
   LOSS_FUNC: bce_logit
   HEAD_ACT: sigmoid
@@ -73,7 +72,7 @@ DATA_LOADER:
   PIN_MEMORY: True
 
 LOGS:
-  DIR: logs/Charades/SLOW_8x8_R50_K400/
+  DIR: logs/Charades/I3D_8x8_R50_K400/
 
 NUM_GPUS: 2
 NUM_SHARDS: 1

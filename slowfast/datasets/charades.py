@@ -64,7 +64,10 @@ class Charades(torch.utils.data.Dataset):
         if self.mode in ["train"]:
             self._num_clips = 1
         elif self.mode in ["val"]:
-            self._num_clips = cfg.TEST.NUM_ENSEMBLE_VIEWS
+            if cfg.TRAIN.FULL_TIME_EVAL:
+                self._num_clips = cfg.TEST.NUM_ENSEMBLE_VIEWS
+            else:
+                self._num_clips = 1
         elif self.mode in ["test"]:
             self._num_clips = (
                 cfg.TEST.NUM_ENSEMBLE_VIEWS * cfg.TEST.NUM_SPATIAL_CROPS
@@ -138,12 +141,19 @@ class Charades(torch.utils.data.Dataset):
             max_scale = self.cfg.DATA.TRAIN_JITTER_SCALES[1]
             crop_size = self.cfg.DATA.TRAIN_CROP_SIZE
         elif self.mode in ["val"]:
-            temporal_sample_index = (
-                self._spatial_temporal_idx[index]
-                % self.cfg.TEST.NUM_ENSEMBLE_VIEWS
-            )
-            spatial_sample_index = 1
-            min_scale, max_scale, crop_size = [self.cfg.DATA.TRAIN_CROP_SIZE] * 3
+            if self.cfg.TRAIN.FULL_TIME_EVAL:
+                temporal_sample_index = (
+                    self._spatial_temporal_idx[index]
+                    % self.cfg.TEST.NUM_ENSEMBLE_VIEWS
+                )
+                spatial_sample_index = 1
+                min_scale, max_scale, crop_size = [self.cfg.DATA.TRAIN_CROP_SIZE] * 3
+            else:
+                temporal_sample_index = -1
+                spatial_sample_index = -1
+                min_scale = self.cfg.DATA.TRAIN_JITTER_SCALES[0]
+                max_scale = self.cfg.DATA.TRAIN_JITTER_SCALES[1]
+                crop_size = self.cfg.DATA.TRAIN_CROP_SIZE
         elif self.mode in ["test"]:
             temporal_sample_index = (
                 self._spatial_temporal_idx[index]

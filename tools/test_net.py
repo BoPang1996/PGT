@@ -20,7 +20,7 @@ logger = logging.get_logger(__name__)
 
 
 @torch.no_grad()
-def perform_test(test_loader, model, test_meter, cfg, writer=None):
+def perform_test(test_loader, model, test_meter, cfg, writer=None, cur_epoch=None):
     """
     For classification:
     Perform mutli-view testing that uniformly samples N clips from a video along
@@ -125,8 +125,11 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None):
         ]
         writer.plot_eval(preds=all_preds_cpu, labels=all_labels_cpu)
 
-    test_meter.finalize_metrics()
+    test_meter.finalize_metrics(cur_epoch=cur_epoch)
     test_meter.reset()
+
+    if cfg.PGT.ENABLE:
+        pgt.remove_hook()
 
 
 def test(cfg):
