@@ -6,6 +6,7 @@
 import torch.nn as nn
 
 from slowfast.models.nonlocal_helper import Nonlocal
+from slowfast.models.progress_helper import ProgressNL
 
 
 def get_trans_func(name):
@@ -382,6 +383,8 @@ class ResStage(nn.Module):
         nonlocal_inds,
         nonlocal_group,
         nonlocal_pool,
+        nonlocal_use_bn,
+        nonlocal_progress,
         dilation,
         instantiation="softmax",
         trans_func_name="bottleneck_transform",
@@ -418,11 +421,13 @@ class ResStage(nn.Module):
             nonlocal_inds (list): If the tuple is empty, no nonlocal layer will
                 be added. If the tuple is not empty, add nonlocal layers after
                 the index-th block.
-            dilation (list): size of dilation for each pathway.
             nonlocal_group (list): list of number of p nonlocal groups. Each
                 number controls how to fold temporal dimension to batch
                 dimension before applying nonlocal transformation.
                 https://github.com/facebookresearch/video-nonlocal-net.
+            nonlocal_use_bn (bool): If True, use BN in Nonlocal.
+            nonlocal_progress (bool): If True, use progress Nonlocal.
+            dilation (list): size of dilation for each pathway.
             instantiation (string): different instantiation for nonlocal layer.
                 Supports two different instantiation method:
                     "dot_product": normalizing correlation matrix with L2.
@@ -475,6 +480,8 @@ class ResStage(nn.Module):
             inplace_relu,
             nonlocal_inds,
             nonlocal_pool,
+            nonlocal_use_bn,
+            nonlocal_progress,
             instantiation,
             dilation,
             norm_module,
@@ -492,6 +499,8 @@ class ResStage(nn.Module):
         inplace_relu,
         nonlocal_inds,
         nonlocal_pool,
+        nonlocal_use_bn,
+        nonlocal_progress,
         instantiation,
         dilation,
         norm_module,
@@ -516,13 +525,21 @@ class ResStage(nn.Module):
                 )
                 self.add_module("pathway{}_res{}".format(pathway, i), res_block)
                 if i in nonlocal_inds[pathway]:
-                    nln = Nonlocal(
-                        dim_out[pathway],
-                        dim_out[pathway] // 2,
-                        nonlocal_pool[pathway],
-                        instantiation=instantiation,
-                        norm_module=norm_module,
-                    )
+                    if not nonlocal_progress:
+                        nln = Nonlocal(
+                            dim_out[pathway],
+                            dim_out[pathway] // 2,
+                            nonlocal_pool[pathway],
+                            instantiation=instantiation,
+                            use_bn=nonlocal_use_bn,
+                            norm_module=norm_module,
+                        )
+                    else:
+                        nln = ProgressNL(
+                            dim_out[pathway],
+                            dim_out[pathway] // 2,
+                            nonlocal_pool[pathway],
+                        )
                     self.add_module(
                         "pathway{}_nonlocal{}".format(pathway, i), nln
                     )
