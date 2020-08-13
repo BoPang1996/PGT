@@ -200,11 +200,14 @@ _C.PGT = CfgNode()
 # Whether to use progress training.
 _C.PGT.ENABLE = False
 
-# Whether to train a progress group together.
-_C.PGT.TRAIN_TOGETHER = False
-
 # Length of each progress step.
 _C.PGT.STEP_LEN = 8
+
+# (FIXME: deprecated) Number of progress steps.
+_C.PGT.STEPS = 5
+
+# (FIXME: deprecated) Number of overlap (propogated) frame.
+_C.PGT.OVERLAP = 1
 
 # Progress evaluation.
 _C.PGT.PG_EVAL = False
@@ -714,4 +717,4 @@ def get_cfg():
     """
     Get a copy of the default config.
     """
-    return _assert_and_infer_cfg(_C.clone())
+    return _assert_and_infer_cfg(_C)
