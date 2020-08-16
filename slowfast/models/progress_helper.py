@@ -8,6 +8,110 @@ from slowfast.models import optimizer as optim
 from slowfast.models.head_helper import ResNetBasicHead, ResNetRoIHead
 
 
+class ProgressTrainer(object):
+    def __init__(self, model, cfg, optimizer=None, loss_fun=None):
+        self.model = model
+        self.optimizer = optimizer
+        self.loss_fun = loss_fun
+        self.steps = cfg.PGT.STEPS
+        self.overlap = cfg.PGT.OVERLAP
+        self.num_frames = cfg.PGT.STEP_LEN
+        self.progress_eval = cfg.PGT.PG_EVAL
+        self.ensemble_method = cfg.PGT.ENSEMBLE_METHOD
+
+        if self.model.training or cfg.PGT.PG_EVAL:
+            tpool_size = 1
+        else:
+            tpool_size = cfg.DATA.NUM_FRAMES // cfg.PGT.STEP_LEN
+
+        pg_pool = nn.AdaptiveAvgPool3d((tpool_size, 1, 1))
+        if cfg.MODEL.FINAL_POOL[1] == "avg":
+            t_pool = nn.AdaptiveAvgPool3d((tpool_size, None, None))
+        elif cfg.MODEL.FINAL_POOL[1] == "max":
+            t_pool = nn.AdaptiveMaxPool3d((tpool_size, None, None))
+        ms = self.model.module if cfg.NUM_GPUS > 1 else self.model
+        if hasattr(ms, "head"):
+            ms.head.s0_tpool = t_pool
+        else:  # regnet
+            ms.avgpool = pg_pool
+
+    def step_train(self, inputs, labels, bboxes=None):
+        losses = []
+        preds = []
+
+        for step in range(self.steps):
+            if step == 0:
+                start_idx = 0
+                end_idx = self.num_frames
+            else:
+                start_idx = step * self.num_frames - (step - 1) * self.overlap
+                end_idx = start_idx + self.num_frames - self.overlap
+            pg_input = [inputs[0][:, :, start_idx:end_idx]]
+
+            # Forward
+            if bboxes != None:
+                pred = self.model(pg_input, bboxes)
+            else:
+                pred = self.model(pg_input)
+
+            if len(labels.size()) > 2:  # for charades
+                loss = self.loss_fun(pred, labels[:, step])
+            else:  # for kinetics and ava
+                # FIXME: ava step labels
+                loss = self.loss_fun(pred, labels)
+
+            # Check Nan Loss.
+            misc.check_nan_losses(loss)
+
+            # Perform the backward pass.
+            self.optimizer.zero_grad()
+            loss.backward()
+            # Update the parameters.
+            self.optimizer.step()
+
+            preds.append(pred)
+            losses.append(loss.detach())
+
+        preds = pred  # take the last step for train acc/map calucaltion 
+        loss_mean = torch.stack(losses, dim=0).mean()
+        return preds, loss_mean
+
+    @torch.no_grad()
+    def step_eval(self, inputs, bboxes=None):
+        if not self.progress_eval:
+            if bboxes != None:
+                preds = self.model(inputs, bboxes)
+            else:
+                preds = self.model(inputs)
+
+        else:
+            preds = []
+
+            for step in range(self.steps):
+                if step == 0:
+                    start_idx = 0
+                    end_idx = self.num_frames
+                else:
+                    start_idx = step * self.num_frames - (step - 1) * self.overlap
+                    end_idx = start_idx + self.num_frames - self.overlap
+                pg_input = [inputs[0][:, :, start_idx:end_idx]]
+
+                # Forward
+                if bboxes != None:
+                    pred = self.model(pg_input, bboxes)
+                else:
+                    pred = self.model(pg_input)
+
+                preds.append(pred)
+
+            if self.ensemble_method == "sum":
+                preds = torch.stack(preds, dim=1).sum(dim=1)
+            elif self.ensemble_method == "max":
+                preds = torch.stack(preds, dim=1).max(dim=1)[0]
+
+        return preds
+
+
 class PGT(object):
     def __init__(self, model, cfg, optimizer=None, loss_fun=None):
         self.padding = []
@@ -25,7 +129,7 @@ class PGT(object):
         self.register_hook()
 
         if self.model.training or self.cfg.PGT.PG_EVAL:
-            pool_size = 1
+            pool_size = self.cfg.PGT.STEP_LEN
         else:
             pool_size = self.cfg.DATA.NUM_FRAMES // self.cfg.PGT.STEP_LEN
 
@@ -143,7 +247,7 @@ class PGT(object):
                 pred = self.model(progress_input)
 
             if len(labels.size()) > 2:  # for charades
-                loss = self.loss_fun(pred, labels[:,idx])
+                loss = self.loss_fun(pred, labels[:, idx])
             else:  # for kinetics and ava
                 # FIXME: ava step labels
                 loss = self.loss_fun(pred, labels)
@@ -189,7 +293,8 @@ class PGT(object):
 
             # progress steps
             for i in range(0, inputs[0].shape[2] - 1, self.cfg.PGT.STEP_LEN - 1):
-                self.padding = [self.inter_results.copy(), self.zero_padding.copy()]
+                self.padding = [
+                    self.inter_results.copy(), self.zero_padding.copy()]
                 self.padding_selfatt = self.inter_results_selfatt
                 self.inter_results = []
                 self.inter_results_selfatt = []

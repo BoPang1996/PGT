@@ -3,8 +3,10 @@
 
 """Video models."""
 
+import torch
 import torch.nn as nn
 
+from slowfast.config.defaults import _C
 from slowfast.models.nonlocal_helper import Nonlocal
 from slowfast.models.progress_helper import ProgressNL
 
@@ -261,6 +263,7 @@ class ResBlock(nn.Module):
         bn_mmt=0.1,
         dilation=1,
         norm_module=nn.BatchNorm3d,
+        temp_progress=False
     ):
         """
         ResBlock class constructs redisual blocks. More details can be found in:
@@ -307,6 +310,8 @@ class ResBlock(nn.Module):
             dilation,
             norm_module,
         )
+        self.temp_progress = temp_progress
+        self.cache = None
 
     def _construct(
         self,
@@ -351,10 +356,24 @@ class ResBlock(nn.Module):
         self.relu = nn.ReLU(self._inplace_relu)
 
     def forward(self, x):
+        # Progress padding
+        if self.temp_progress:
+            # FIXME: when pooling
+            if x.size(2) < _C.PGT.STEP_LEN: # pg step
+                assert self.cache != None
+                x = torch.cat([self.cache, x], dim=2)
+            else: # reset cache
+                self.cache = None
+            cache = x[:, :, -1, ...].detach().unsqueeze(2)
         if hasattr(self, "branch1"):
             x = self.branch1_bn(self.branch1(x)) + self.branch2(x)
         else:
             x = x + self.branch2(x)
+        # Remove progress padding and update cache
+        if self.temp_progress:
+            if self.cache != None:
+                x = x[:, :, 1:, ...]
+            self.cache = cache
         x = self.relu(x)
         return x
 
@@ -391,6 +410,7 @@ class ResStage(nn.Module):
         stride_1x1=False,
         inplace_relu=True,
         norm_module=nn.BatchNorm3d,
+        temp_progress=False,
     ):
         """
         The `__init__` method of any subclass should also contain these arguments.
@@ -485,6 +505,7 @@ class ResStage(nn.Module):
             instantiation,
             dilation,
             norm_module,
+            temp_progress,
         )
 
     def _construct(
@@ -504,6 +525,7 @@ class ResStage(nn.Module):
         instantiation,
         dilation,
         norm_module,
+        temp_progress,
     ):
         for pathway in range(self.num_pathways):
             for i in range(self.num_blocks[pathway]):
@@ -522,6 +544,7 @@ class ResStage(nn.Module):
                     inplace_relu=inplace_relu,
                     dilation=dilation[pathway],
                     norm_module=norm_module,
+                    temp_progress=temp_progress,
                 )
                 self.add_module("pathway{}_res{}".format(pathway, i), res_block)
                 if i in nonlocal_inds[pathway]:
