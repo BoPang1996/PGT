@@ -1,0 +1,7 @@
+_BASE_: SLOW_8x8_R50.yaml
+
+SOLVER:
+  LR_POLICY: steps_with_relative_lrs
+  LRS: [1, 0.1, 0.01, 0.001]
+  STEPS: [0, 94, 154, 196]
+  MAX_EPOCH: 239
