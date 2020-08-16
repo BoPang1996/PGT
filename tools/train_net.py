@@ -20,7 +20,7 @@ from slowfast.datasets import loader
 from slowfast.models import build_model
 from slowfast.utils.meters import AVAMeter, TrainMeter, ValMeter, TestMeter
 from slowfast.utils.multigrid import MultigridSchedule
-from slowfast.models.progress_helper import PGT
+from slowfast.models.progress_helper import ProgressTrainer
 from test_net import perform_test
 
 logger = logging.get_logger(__name__)
@@ -52,7 +52,7 @@ def train_epoch(
     loss_fun = losses.get_loss_func(cfg.MODEL.LOSS_FUNC)(reduction="mean")
 
     if cfg.PGT.ENABLE:
-        pgt = PGT(model, cfg, optimizer, loss_fun)
+        pg_trainer = ProgressTrainer(model, cfg, optimizer, loss_fun)
 
     for cur_iter, (inputs, labels, _, meta) in enumerate(train_loader):
         # Transfer the data to the current GPU device.
@@ -95,10 +95,10 @@ def train_epoch(
             optimizer.step()
         else:
             if cfg.DETECTION.ENABLE:
-                preds, loss = pgt.step_train(inputs, labels, meta["boxes"])
+                preds, loss = pg_trainer.step_train(inputs, labels, meta["boxes"])
 
             else:
-                preds, loss = pgt.step_train(inputs, labels)
+                preds, loss = pg_trainer.step_train(inputs, labels)
 
         if cfg.DETECTION.ENABLE:
             if cfg.NUM_GPUS > 1:
@@ -167,9 +167,6 @@ def train_epoch(
     train_meter.log_epoch_stats(cur_epoch)
     train_meter.reset()
 
-    if cfg.PGT.ENABLE:
-        pgt.remove_hook()
-
 
 @torch.no_grad()
 def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
@@ -191,7 +188,7 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
     val_meter.iter_tic()
 
     if cfg.PGT.ENABLE:
-        pgt = PGT(model, cfg)
+        pg_trainer = ProgressTrainer(model, cfg)
 
     if du.get_world_size() == 1:
         extra_args = {}
@@ -219,7 +216,7 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
             if not cfg.PGT.ENABLE:
                 preds = model(inputs, meta["boxes"])
             else:
-                preds = pgt.step_eval(inputs, meta["boxes"])
+                preds = pg_trainer.step_eval(inputs, meta["boxes"])
 
             preds = preds.cpu()
             ori_boxes = meta["ori_boxes"].cpu()
@@ -238,7 +235,7 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
             if not cfg.PGT.ENABLE:
                 preds = model(inputs)
             else:
-                preds = pgt.step_eval(inputs)
+                preds = pg_trainer.step_eval(inputs)
 
             if cfg.DATA.MULTI_LABEL:
                 if cfg.NUM_GPUS > 1:
@@ -293,9 +290,6 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
         )
 
     val_meter.reset()
-
-    if cfg.PGT.ENABLE:
-        pgt.remove_hook()
 
 
 def calculate_and_update_precise_bn(loader, model, num_iters=200):

@@ -95,6 +95,7 @@ class ResNet(nn.Module):
             inplace_relu=cfg.RESNET.INPLACE_RELU,
             dilation=cfg.RESNET.SPATIAL_DILATIONS[0],
             norm_module=self.norm_module,
+            temp_progress=cfg.PGT.ENABLE,
         )
 
         for pathway in range(self.num_pathways):
@@ -125,6 +126,7 @@ class ResNet(nn.Module):
             inplace_relu=cfg.RESNET.INPLACE_RELU,
             dilation=cfg.RESNET.SPATIAL_DILATIONS[1],
             norm_module=self.norm_module,
+            temp_progress=cfg.PGT.ENABLE,
         )
 
         self.s4 = resnet_helper.ResStage(
@@ -147,6 +149,7 @@ class ResNet(nn.Module):
             inplace_relu=cfg.RESNET.INPLACE_RELU,
             dilation=cfg.RESNET.SPATIAL_DILATIONS[2],
             norm_module=self.norm_module,
+            temp_progress=cfg.PGT.ENABLE,
         )
 
         self.s5 = resnet_helper.ResStage(
@@ -169,6 +172,7 @@ class ResNet(nn.Module):
             inplace_relu=cfg.RESNET.INPLACE_RELU,
             dilation=cfg.RESNET.SPATIAL_DILATIONS[3],
             norm_module=self.norm_module,
+            temp_progress=cfg.PGT.ENABLE,
         )
 
         if self.enable_detection:
@@ -195,18 +199,6 @@ class ResNet(nn.Module):
                 dropout_rate=cfg.MODEL.DROPOUT_RATE,
                 act_func=cfg.MODEL.HEAD_ACT,
             )
-        
-        # input shape of each temporal layer, [channel, spatial stride]
-        if self._cfg.MODEL.ARCH == "slow":
-            # FIXME: use variable to compute
-            if self.enable_detection:
-                self.padding_shape = [*[[width_per_group * 8, 8]] * 1,
-                                    *[[width_per_group * 16, 16]] * d4,
-                                    *[[width_per_group * 32, 16]] * (d5 - 1),]
-            else:
-                self.padding_shape = [*[[width_per_group * 8, 8]] * 1,
-                                    *[[width_per_group * 16, 16]] * d4,
-                                    *[[width_per_group * 32, 32]] * (d5 - 1),]
 
     def forward(self, x, bboxes=None):
         x = self.s1(x)

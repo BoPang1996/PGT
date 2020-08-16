@@ -14,7 +14,7 @@ import slowfast.utils.misc as misc
 from slowfast.datasets import loader
 from slowfast.models import build_model
 from slowfast.utils.meters import AVAMeter, TestMeter
-from slowfast.models.progress_helper import PGT
+from slowfast.models.progress_helper import ProgressTrainer
 
 logger = logging.get_logger(__name__)
 
@@ -45,7 +45,7 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None, cur_epoch=Non
     test_meter.iter_tic()
 
     if cfg.PGT.ENABLE:
-        pgt = PGT(model, cfg)
+        pg_trainer = ProgressTrainer(model, cfg)
 
     if du.get_world_size() == 1:
         extra_args = {}
@@ -76,7 +76,7 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None, cur_epoch=Non
             if not cfg.PGT.ENABLE:
                 preds = model(inputs, meta["boxes"])
             else:
-                preds = pgt.step_eval(inputs, meta["boxes"])
+                preds = pg_trainer.step_eval(inputs, meta["boxes"])
             preds = preds.cpu()
             ori_boxes = meta["ori_boxes"].cpu()
             metadata = meta["metadata"].cpu()
@@ -98,7 +98,7 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None, cur_epoch=Non
             if not cfg.PGT.ENABLE:
                 preds = model(inputs)
             else:
-                preds = pgt.step_eval(inputs)
+                preds = pg_trainer.step_eval(inputs)
 
             # Gather all the predictions across all the devices to perform ensemble.
             if cfg.NUM_GPUS > 1:
@@ -127,9 +127,6 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None, cur_epoch=Non
 
     test_meter.finalize_metrics(cur_epoch=cur_epoch)
     test_meter.reset()
-
-    if cfg.PGT.ENABLE:
-        pgt.remove_hook()
 
 
 def test(cfg):

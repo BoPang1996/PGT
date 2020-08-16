@@ -102,4 +102,5 @@ def load_config(args):
 
     # Create the checkpoint dir.
     cu.make_checkpoint_dir(cfg.LOGS.DIR)
+    cfg.freeze()
     return cfg
