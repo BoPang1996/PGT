@@ -25,6 +25,7 @@ class Nonlocal(nn.Module):
         instantiation="softmax",
         zero_init_final_conv=False,
         zero_init_final_norm=True,
+        use_bn=True,
         norm_eps=1e-5,
         norm_momentum=0.1,
         norm_module=nn.BatchNorm3d,
@@ -58,6 +59,7 @@ class Nonlocal(nn.Module):
             if pool_size is None
             else any((size > 1 for size in pool_size))
         )
+        self.use_bn = use_bn
         self.norm_eps = norm_eps
         self.norm_momentum = norm_momentum
         self._construct_nonlocal(
@@ -86,13 +88,14 @@ class Nonlocal(nn.Module):
         self.conv_out.zero_init = zero_init_final_conv
 
         # TODO: change the name to `norm`
-        self.bn = norm_module(
-            num_features=self.dim,
-            eps=self.norm_eps,
-            momentum=self.norm_momentum,
-        )
-        # Zero initializing the final bn.
-        self.bn.transform_final_bn = zero_init_final_norm
+        if self.use_bn:
+            self.bn = norm_module(
+                num_features=self.dim,
+                eps=self.norm_eps,
+                momentum=self.norm_momentum,
+            )
+            # Zero initializing the final bn.
+            self.bn.transform_final_bn = zero_init_final_norm
 
         # Optional to add the spatial-temporal pooling.
         if self.use_pool:
@@ -136,6 +139,69 @@ class Nonlocal(nn.Module):
             raise NotImplementedError(
                 "Unknown norm type {}".format(self.instantiation)
             )
+
+        # (N, TxHxW, TxHxW) * (N, C, TxHxW) => (N, C, TxHxW).
+        theta_phi_g = torch.einsum("ntg,ncg->nct", (theta_phi, g))
+
+        # (N, C, TxHxW) => (N, C, T, H, W).
+        theta_phi_g = theta_phi_g.view(N, self.dim_inner, T, H, W)
+
+        p = self.conv_out(theta_phi_g)
+        if self.use_bn:
+            p = self.bn(p)
+        return x_identity + p
+
+
+class Featurebank(Nonlocal):
+    """Feature Bank Operator"""
+    def __init__(
+        self,
+        dim,
+        dim_inner,
+        pool_size=None,
+    ):
+        super(Featurebank, self).__init__(
+            dim,
+            dim_inner, 
+            pool_size,
+            instantiation="softmax",
+            zero_init_final_conv=True,
+            use_bn=True,
+        )
+
+    def _construct_nonlocal(self):
+        super(Featurebank, self)._construct_nonlocal(
+            zero_init_final_conv,
+            zero_init_final_norm,
+            norm_module
+        )
+        # GroupNorm with group = 1 is equivalent to LayerNorm. 
+        # Set affine to False to match with caffe2.
+        self.bn = nn.GroupNorm(1, self.dim, eps=self.norm_eps, affine=False)
+
+    def forward(self, x):
+        x_identity = x
+        N, C, T, H, W = x.size()
+
+        theta = self.conv_theta(x)
+
+        # Perform temporal-spatial pooling to reduce the computation.
+        if self.use_pool:
+            y = self.pool(x)  # FIXME: where does y comes from?
+
+        phi = self.conv_phi(y)
+        g = self.conv_g(y)
+
+        theta = theta.view(N, self.dim_inner, -1)
+        phi = phi.view(N, self.dim_inner, -1)
+        g = g.view(N, self.dim_inner, -1)
+
+        # (N, C, TxHxW) * (N, C, TxHxW) => (N, TxHxW, TxHxW).
+        theta_phi = torch.einsum("nct,ncp->ntp", (theta, phi))
+
+        # Normalizing the affinity tensor theta_phi before softmax.
+        theta_phi = theta_phi * (self.dim_inner ** -0.5)
+        theta_phi = nn.functional.softmax(theta_phi, dim=2)
 
         # (N, TxHxW, TxHxW) * (N, C, TxHxW) => (N, C, TxHxW).
         theta_phi_g = torch.einsum("ntg,ncg->nct", (theta_phi, g))

@@ -89,7 +89,7 @@ class RegNet(nn.Module):
 
         self.cfg = cfg
         self.model_cfg = _CFG[self.cfg.REGNET.DEPTH]
-        self.model_cfg['sa'] = self.cfg.PGT.SELFATT_LOCATION
+        self.model_cfg['sa'] = [0, 0, 0, 0]  # FIXME
         if self.cfg.PGT.ENABLE:
             temporal_p = 0
         else:

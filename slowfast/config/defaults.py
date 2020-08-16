@@ -65,11 +65,18 @@ _C.TRAIN.CHECKPOINT_FILE_PATH = ""
 # Checkpoint types include `caffe2` or `pytorch`.
 _C.TRAIN.CHECKPOINT_TYPE = "pytorch"
 
+# If True, only transfer weight when loading checkpoint.
+_C.TRAIN.CHECKPOINT_TRANSFER_WEIGHT = True
+
 # If True, perform inflation when loading checkpoint.
 _C.TRAIN.CHECKPOINT_INFLATE = False
 
 # If True, strict loading checkpoint
 _C.TRAIN.CHECKPOINT_STRICT = False
+
+# If True, validation will use test setting without spatial ensemble.
+# Used for Charades validation.
+_C.TRAIN.FULL_TIME_EVAL = False
 
 # ---------------------------------------------------------------------------- #
 # Testing options
@@ -178,6 +185,12 @@ _C.NONLOCAL.POOL = [
     [[1, 2, 2], [1, 2, 2]],
 ]
 
+# If True, use Batch Normalization after final conv out. FIXME: redundant
+_C.NONLOCAL.USE_BN = True
+
+# If True, use progress Nonlocal.
+_C.NONLOCAL.PROGRESS = False
+
 
 # -----------------------------------------------------------------------------
 # Progress training options
@@ -193,17 +206,11 @@ _C.PGT.TRAIN_TOGETHER = False
 # Length of each progress step.
 _C.PGT.STEP_LEN = 8
 
-# Whether to use progress self attention. FIXME: duplicate with SELFATT_LOCATION.
-_C.PGT.SELFATT = False
-
-# Progress self attention location.
-_C.PGT.SELFATT_LOCATION = [0, 0, 0, 0]
-
 # Progress evaluation.
 _C.PGT.PG_EVAL = False
 
 # Ensemble method for progress evaluation.
-_C.PGT.ENSEMBLE_METHOD = "avg"
+_C.PGT.ENSEMBLE_METHOD = "sum"
 
 
 # -----------------------------------------------------------------------------

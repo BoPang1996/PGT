@@ -10,17 +10,18 @@ AVA:
   ANNOTATION_DIR: obs://bucket-5006/data/AVA/fair/annotations
 
 SOLVER:
-  BASE_LR: 0.1
-  WARMUP_START_LR: 0.0005
+  BASE_LR: 0.2
+  WARMUP_START_LR: 0.001
 
 TEST:
   BATCH_SIZE: 8
 
 DATA_LOADER:
-  NUM_WORKERS: 4
+  NUM_WORKERS: 7
   PIN_MEMORY: False
 
 LOGS:
   DIR: obs://bucket-5006/penggao/logs/progress-action/AVA/MOX_SLOW_PROG_36x8_R50_K400
 
 NUM_GPUS: 8
+NUM_SHARDS: 2

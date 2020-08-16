@@ -1,8 +1,8 @@
 TRAIN:
   ENABLE: True
   DATASET: kinetics
-  BATCH_SIZE: 48
-  EVAL_PERIOD: 10
+  BATCH_SIZE: 64
+  EVAL_PERIOD: 1
   CHECKPOINT_PERIOD: 1
   AUTO_RESUME: True
 
@@ -13,8 +13,8 @@ DATA:
   TRAIN_CROP_SIZE: 224
   TEST_CROP_SIZE: 256
   INPUT_CHANNEL_NUM: [3]
-  PATH_TO_DATA_DIR: /home/pg/data/miniKinetics/
-  PATH_PREFIX: /home/pg/data/miniKinetics/
+  PATH_TO_DATA_DIR: /home/pg/data/Kinetics_400/
+  PATH_PREFIX: /home/pg/data/Kinetics_400/
 
 RESNET:
   ZERO_INIT_FINAL_BN: True
@@ -31,15 +31,15 @@ NONLOCAL:
   INSTANTIATION: softmax
 
 BN:
-  USE_PRECISE_STATS: True
+  USE_PRECISE_STATS: False
   NUM_BATCHES_PRECISE: 200
 
 SOLVER:
-  BASE_LR: 0.075
+  BASE_LR: 0.1
   LR_POLICY: steps_with_relative_lrs
-  STEPS: [0, 44, 88, 118]
-  LRS: [1, 0.1, 0.01, 0.001]
-  MAX_EPOCH: 196
+  LRS: [1, 0.1, 0.01, 0.001, 0.0001, 0.00001]
+  STEPS: [0, 94, 154, 196]
+  MAX_EPOCH: 239
   MOMENTUM: 0.9
   WEIGHT_DECAY: 1e-4
   WARMUP_EPOCHS: 34.0
@@ -47,7 +47,7 @@ SOLVER:
   OPTIMIZING_METHOD: sgd
 
 MODEL:
-  NUM_CLASSES: 200
+  NUM_CLASSES: 400
   ARCH: r3d
   MODEL_NAME: RegNet
   LOSS_FUNC: cross_entropy
@@ -56,14 +56,14 @@ MODEL:
 TEST:
   ENABLE: True
   DATASET: kinetics
-  BATCH_SIZE: 48
+  BATCH_SIZE: 64
 
 DATA_LOADER:
   NUM_WORKERS: 8
   PIN_MEMORY: True
 
 LOGS:
-  DIR: logs/miniKinetics/R3D_8x8_400M/
+  DIR: logs/Kinetics/R3D_8x8_400M/
 
 NUM_GPUS: 4
 NUM_SHARDS: 1

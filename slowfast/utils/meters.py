@@ -256,6 +256,7 @@ class TestMeter(object):
         overall_iters,
         multi_label=False,
         ensemble_method="sum",
+        tblogger=None,
     ):
         """
         Construct tensors to store the predictions and labels. Expect to get
@@ -288,6 +289,7 @@ class TestMeter(object):
             else torch.zeros((num_videos)).long()
         )
         self.clip_count = torch.zeros((num_videos)).long()
+        self.tblogger = tblogger
         # Reset metric.
         self.reset()
 
@@ -358,7 +360,7 @@ class TestMeter(object):
     def iter_toc(self):
         self.iter_timer.pause()
 
-    def finalize_metrics(self, ks=(1, 5)):
+    def finalize_metrics(self, ks=(1, 5), cur_epoch=None):
         """
         Calculate and log the final ensembled metrics.
         ks (tuple): list of top-k values for topk_accuracies. For example,
@@ -398,6 +400,11 @@ class TestMeter(object):
                     topk, prec=2
                 )
         logging.log_json_stats(stats)
+        if self.tblogger != None and cur_epoch != None:
+            for k, v in stats.items():
+                if 'acc' in k or 'map' in k:
+                    self.tblogger.add_scalar(
+                        'val/{}'.format(k), v, cur_epoch + 1)
 
 
 class ScalarMeter(object):

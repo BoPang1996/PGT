@@ -3,8 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.parallel.distributed as dist
 
-import slowfast.utils.misc as misc
-import slowfast.models.optimizer as optim
+from slowfast.utils import misc as misc
+from slowfast.models import optimizer as optim
 from slowfast.models.head_helper import ResNetBasicHead, ResNetRoIHead
 
 
@@ -24,23 +24,27 @@ class PGT(object):
         self.hook_handles = []
         self.register_hook()
 
-        # pooling
-        pg_pool = nn.AdaptiveAvgPool3d((1, 1, 1))
+        if self.model.training or self.cfg.PGT.PG_EVAL:
+            pool_size = 1
+        else:
+            pool_size = self.cfg.DATA.NUM_FRAMES // self.cfg.PGT.STEP_LEN
+
+        pg_pool = nn.AdaptiveAvgPool3d((pool_size, 1, 1))
         if cfg.MODEL.FINAL_POOL[1] == "avg":
-            t_pool = nn.AdaptiveAvgPool3d((1, None, None))
+            t_pool = nn.AdaptiveAvgPool3d((pool_size, None, None))
         elif cfg.MODEL.FINAL_POOL[1] == "max":
-            t_pool = nn.AdaptiveMaxPool3d((1, None, None))
+            t_pool = nn.AdaptiveMaxPool3d((pool_size, None, None))
         ms = self.model.module if cfg.NUM_GPUS > 1 else self.model
-        if isinstance(ms.head, (ResNetRoIHead, ResNetBasicHead)):
+        if hasattr(ms, "head"):
             ms.head.s0_tpool = t_pool
         else:  # regnet
             ms.avgpool = pg_pool
 
-        # For PrgSelfATT padding
-        if self.cfg.PGT.SELFATT:
+        # For progress NL padding
+        if self.cfg.NONLOCAL.PROGRESS:
             theta_len = self.cfg.PGT.STEP_LEN if self.model.training else None
             for module in self.model.modules():
-                if isinstance(module, PrgSelfAtt):
+                if isinstance(module, ProgressNL):
                     module.theta_len = theta_len
 
     def register_hook(self):
@@ -63,16 +67,14 @@ class PGT(object):
             return input
 
         def self_att_forward_hook(module, input, output):
-            assert isinstance(
-                module, PrgSelfAtt), "wrong hook on non self-attention layers"
+            assert isinstance(module, ProgressNL)
             if isinstance(input, tuple):
                 input = input[0]
             self.inter_results_selfatt.append(
                 input[:, :, -self.cfg.PGT.STEP_LEN:-1].detach())
 
         def self_att_forward_pre_hook(module, input):
-            assert isinstance(
-                module, PrgSelfAtt), "wrong hook on non self-attention layers"
+            assert isinstance(module, ProgressNL)
             if isinstance(input, tuple):
                 input = input[0]
             if len(self.padding_selfatt) > 0:
@@ -87,7 +89,7 @@ class PGT(object):
                     module.register_forward_hook(temp_cnn_forward_hook))
                 self.hook_handles.append(
                     module.register_forward_pre_hook(temp_cnn_forward_pre_hook))
-            elif isinstance(module, PrgSelfAtt):
+            elif isinstance(module, ProgressNL):
                 self.hook_handles.append(
                     module.register_forward_hook(self_att_forward_hook))
                 self.hook_handles.append(
@@ -200,15 +202,15 @@ class PGT(object):
                     pred = self.model(progress_input)
                 preds.append(pred)
 
-            if self.cfg.PGT.ENSEMBLE_METHOD == "avg":
-                preds = torch.stack(preds, dim=1).mean(dim=1)
+            if self.cfg.PGT.ENSEMBLE_METHOD == "sum":
+                preds = torch.stack(preds, dim=1).sum(dim=1)
             elif self.cfg.PGT.ENSEMBLE_METHOD == "max":
                 preds = torch.stack(preds, dim=1).max(dim=1)[0]
 
         return preds
 
 
-class PrgSelfAtt(nn.Module):
+class ProgressNL(nn.Module):
     def __init__(
         self,
         dim,
@@ -216,13 +218,13 @@ class PrgSelfAtt(nn.Module):
         pool_size=None,
         theta_len=None,
         instantiation="softmax",
-        norm_type="batchnorm",
-        zero_init_final_conv=False,
+        norm_type="layernorm",
+        zero_init_final_conv=True,
         zero_init_final_norm=True,
         norm_eps=1e-5,
         norm_momentum=0.1,
     ):
-        super(PrgSelfAtt, self).__init__()
+        super(ProgressNL, self).__init__()
         self.dim = dim
         self.dim_inner = dim_inner
         self.pool_size = pool_size
@@ -249,14 +251,6 @@ class PrgSelfAtt(nn.Module):
         )
         self.conv_g = nn.Conv3d(
             self.dim, self.dim_inner, kernel_size=1, stride=1, padding=0
-        )
-
-        self.conv_f = nn.Conv3d(
-            self.dim_inner, self.dim_inner, kernel_size=1, stride=1, padding=0
-        )
-
-        self.conv_z = nn.Conv3d(
-            self.dim_inner, self.dim_inner, kernel_size=1, stride=1, padding=0
         )
 
         # Final convolution output.
@@ -350,8 +344,3 @@ class PrgSelfAtt(nn.Module):
             p = self.ln(p)
 
         return x_identity + p
-
-    def init_hidden(self, batch, size):
-        frame, height, width = size
-        self.hidden_state = torch.zeros((batch, self.dim_inner, frame, height, width),
-                                        device=self.conv_theta.weight.device)
