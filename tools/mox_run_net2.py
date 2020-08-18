@@ -42,7 +42,7 @@ def pip_install_list(filelist):
 
 if __name__ == "__main__":
     # pip_install("progress-action/requirements.txt")
-    pip_install("fvcore")
+    # pip_install("fvcore")
     print("Install pip packages finished!")
 
     compile_custom()

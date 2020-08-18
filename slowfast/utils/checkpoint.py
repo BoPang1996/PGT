@@ -310,7 +310,7 @@ def load_checkpoint(
             ms.load_state_dict(state_dict, strict=strict_loading)
             # Load the optimizer state (commonly not done when fine-tuning)
             if optimizer and not transfer_weight:
-                optimizer.load_state_dict(checkpoint["optimizer"])
+                optimizer.load_state_dict(checkpoint["optimizer_state"])
         if "epoch" in checkpoint.keys() and not transfer_weight:
             epoch = checkpoint["epoch"]
         else:

@@ -360,7 +360,7 @@ class ResBlock(nn.Module):
         if self.temp_progress:
             # FIXME: when pooling
             if x.size(2) < _C.PGT.STEP_LEN: # pg step
-                assert self.cache != None
+                assert isinstance(self.cache, torch.Tensor)
                 x = torch.cat([self.cache, x], dim=2)
             else: # reset cache
                 self.cache = None
@@ -371,7 +371,7 @@ class ResBlock(nn.Module):
             x = x + self.branch2(x)
         # Remove progress padding and update cache
         if self.temp_progress:
-            if self.cache != None:
+            if isinstance(self.cache, torch.Tensor):
                 x = x[:, :, 1:, ...]
             self.cache = cache
         x = self.relu(x)
