@@ -287,9 +287,7 @@ def load_checkpoint(
                     ckpt_blob_shape = checkpoint["model_state"][key].shape
                     model_blob_shape = ms.state_dict()[key].shape
                     if ckpt_blob_shape == tuple(model_blob_shape):
-                        state_dict[key] = torch.tensor(
-                            checkpoint["model_state"][key]
-                        ).clone()
+                        state_dict[key] = checkpoint["model_state"][key]
                         # logger.info(
                         #     "{}: {} => {}: {}".format(
                         #         key,
