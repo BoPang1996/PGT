@@ -1,28 +1,10 @@
-_BASE_: SLOW_PROG_36x8_R50_stepwise.yaml
-
-TRAIN:
-  BATCH_SIZE: 128
-  EVAL_PERIOD: 1
-  CHECKPOINT_FILE_PATH: obs://video-understanding-shanghai/penggao/logs/progress-action/Kinetics/MOX_SLOW_PROG_36x8_R50_stepwise/2e-1x2/checkpoints/checkpoint_epoch_00012.pyth
-  CHECKPOINT_TYPE: pytorch
-  CHECKPOINT_TRANSFER_WEIGHT: False
+_BASE_: MOX_SLOW_PROG_36x8_R50_stepwise.yaml
 
 DATA:
   PATH_TO_DATA_DIR: obs://video-understanding-shanghai/penggao/data/Kinetics/
   PATH_PREFIX: obs://video-understanding-shanghai/poli/datasets/Kinetics/
 
-SOLVER:
-  BASE_LR: 0.3
-  WARMUP_START_LR: 0.04
-
-TEST:
-  BATCH_SIZE: 32
-
-DATA_LOADER:
-  NUM_WORKERS: 7
-  PIN_MEMORY: False
-
 LOGS:
-  DIR: obs://video-understanding-shanghai/penggao/logs/progress-action/Kinetics/MOX_SLOW_PROG_36x8_R50_stepwise
+  DIR: obs://video-understanding-shanghai/penggao/logs/progress-action/Kinetics/MOX2_SLOW_PROG_36x8_R50_stepwise
 
 NUM_SHARDS: 2

@@ -1,0 +1,23 @@
+_BASE_: SLOW_8x8_R50_stepwise.yaml
+
+TRAIN:
+  BATCH_SIZE: 256
+  EVAL_PERIOD: 1
+
+DATA:
+  PATH_TO_DATA_DIR: obs://bucket-5006/data/miniKinetics/
+  PATH_PREFIX: obs://bucket-5006/data/Kinetics_400/rgb/
+
+SOLVER:
+  BASE_LR: 0.4
+  WARMUP_START_LR: 0.04
+
+TEST:
+  BATCH_SIZE: 256
+
+DATA_LOADER:
+  NUM_WORKERS: 7
+  PIN_MEMORY: False
+
+LOGS:
+  DIR: obs://bucket-5006/penggao/logs/progress-action/miniKinetics/MOX_SLOW_8x8_R50_stepwise

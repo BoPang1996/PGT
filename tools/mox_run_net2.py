@@ -40,9 +40,25 @@ def pip_install_list(filelist):
     ])
 
 
+def pip_install_directory(local_dir_path):
+    with open(os.path.join(local_dir_path, "install_list.txt"), 'r') as list_file:
+        for package in list_file:
+            subprocess.call([
+                sys.executable, "-m", "pip", "install", "-U",
+                "--index-url=http://100.125.2.97:8888/repository/pypi/simple",
+                "--trusted-host=100.125.2.97",
+                os.path.join(local_dir_path, package.strip())
+            ])
+
+
 if __name__ == "__main__":
     # pip_install("progress-action/requirements.txt")
-    # pip_install("fvcore")
+
+    PIP_S3_PATH = "obs://video-understanding-shanghai/penggao/pip_packages"
+    PIP_LOCAL_PATH = "/cache/pip_packages"
+    mox.file.copy_parallel(PIP_S3_PATH, PIP_LOCAL_PATH)
+    print("Copy pip packages from obs finished!")
+    pip_install_directory(PIP_LOCAL_PATH)
     print("Install pip packages finished!")
 
     compile_custom()
