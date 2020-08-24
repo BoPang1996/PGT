@@ -2,7 +2,7 @@ _BASE_: SLOW_8x8_R50_K400.yaml
 
 TRAIN:
   CHECKPOINT_TYPE: pytorch
-  CHECKPOINT_FILE_PATH: /home/pg/data/models/k400/SLOW_NLN_8x8_R50.pkl
+  CHECKPOINT_FILE_PATH: /home/pg/data/models/k400/SLOW_NLN_8x8_R50.pyth
 
 DATA:
   NUM_FRAMES: 36
@@ -10,8 +10,11 @@ DATA:
 PGT:
   ENABLE: True
   STEP_LEN: 8
+  STEPS: 5
+  OVERLAP: 1
   PG_EVAL: True
   ENSEMBLE_METHOD: max
+  NL_NORM: batchnorm
 
 NONLOCAL:
   LOCATION: [[[]], [[1, 3]], [[1, 3, 5]], [[]]]
@@ -20,13 +23,13 @@ NONLOCAL:
   PROGRESS: True
 
 SOLVER:
-  STEPS: [0, 10, 15]
+  BASE_LR: 0.025
+  STEPS: [0, 10, 16]
   MAX_EPOCH: 20
   WARMUP_EPOCHS: 1.0
 
 TEST:
-  BATCH_SIZE: 4
-  NUM_ENSEMBLE_VIEWS: 2
+  NUM_ENSEMBLE_VIEWS: 3
   NUM_SPATIAL_CROPS: 3
 
 LOGS:

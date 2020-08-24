@@ -1,10 +1,15 @@
 _BASE_: SLOW_8x8_R50_K400.yaml
 
+TRAIN:
+  FULL_TIME_EVAL: True
+  CHECKPOINT_TYPE: pytorch
+  CHECKPOINT_FILE_PATH: /home/pg/data/models/k400/SLOW_NLN_8x8_R50.pyth
+
 NONLOCAL:
   LOCATION: [[[]], [[1, 3]], [[1, 3, 5]], [[]]]
   GROUP: [[1], [1], [1], [1]]
   INSTANTIATION: softmax
-  USE_BN: False
+  USE_BN: True
 
 LOGS:
-  DIR: logs/Chardes/SLOW_NLN_8x8_R50_K400
+  DIR: logs/Charades/SLOW_NLN_8x8_R50_K400

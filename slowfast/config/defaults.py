@@ -203,17 +203,23 @@ _C.PGT.ENABLE = False
 # Length of each progress step.
 _C.PGT.STEP_LEN = 8
 
-# (FIXME: deprecated) Number of progress steps.
+# Number of progress steps.
 _C.PGT.STEPS = 5
 
-# (FIXME: deprecated) Number of overlap (propogated) frame.
+# Number of overlap (propogated) frame.
 _C.PGT.OVERLAP = 1
+
+# Progress cache type. Could be "last", "max", "avg"
+_C.PGT.CACHE = "last"
 
 # Progress evaluation.
 _C.PGT.PG_EVAL = False
 
 # Ensemble method for progress evaluation.
 _C.PGT.ENSEMBLE_METHOD = "sum"
+
+# Norm type for progress NL. Could be "none", "batchnorm", "layernorm"
+_C.PGT.NL_NORM = "batchnorm"
 
 
 # -----------------------------------------------------------------------------
@@ -694,6 +700,7 @@ def _assert_and_infer_cfg(cfg):
     # BN assertions.
     if cfg.BN.USE_PRECISE_STATS:
         assert cfg.BN.NUM_BATCHES_PRECISE >= 0
+
     # TRAIN assertions.
     assert cfg.TRAIN.CHECKPOINT_TYPE in ["pytorch", "caffe2"]
     assert cfg.TRAIN.BATCH_SIZE % cfg.NUM_GPUS == 0
@@ -707,6 +714,13 @@ def _assert_and_infer_cfg(cfg):
     assert cfg.RESNET.NUM_GROUPS > 0
     assert cfg.RESNET.WIDTH_PER_GROUP > 0
     assert cfg.RESNET.WIDTH_PER_GROUP % cfg.RESNET.NUM_GROUPS == 0
+
+    # Progress assertions.
+    if cfg.PGT.ENABLE:
+        # (8 - 1) x (5 - 1) + 8 = 36
+        assert (cfg.PGT.STEP_LEN - cfg.PGT.OVERLAP) * \
+            (cfg.PGT.STEPS - 1) + \
+            cfg.PGT.STEP_LEN == cfg.DATA.NUM_FRAMES
 
     # General assertions.
     assert cfg.SHARD_ID < cfg.NUM_SHARDS

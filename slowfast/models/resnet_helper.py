@@ -5,6 +5,7 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from slowfast.config.defaults import _C
 from slowfast.models.nonlocal_helper import Nonlocal
@@ -364,7 +365,12 @@ class ResBlock(nn.Module):
                 x = torch.cat([self.cache, x], dim=2)
             else: # reset cache
                 self.cache = None
-            cache = x[:, :, -1, ...].detach().unsqueeze(2)
+            if _C.PGT.CACHE == "last":
+                cache = x[:, :, -1, ...].detach().unsqueeze(2)
+            elif _C.PGT.CACHE == "max":
+                cache = F.max_pool3d(x, (x.size(2), 1, 1), 1).detach()
+            elif _C.PGT.CACHE == "avg":
+                cache = F.avg_pool3d(x, (x.size(2), 1, 1), 1).detach()
         if hasattr(self, "branch1"):
             x = self.branch1_bn(self.branch1(x)) + self.branch2(x)
         else:
@@ -562,6 +568,8 @@ class ResStage(nn.Module):
                             dim_out[pathway],
                             dim_out[pathway] // 2,
                             nonlocal_pool[pathway],
+                            instantiation=instantiation,
+                            norm_type=_C.PGT.NL_NORM,
                         )
                     self.add_module(
                         "pathway{}_nonlocal{}".format(pathway, i), nln
