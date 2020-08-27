@@ -4,9 +4,10 @@ import torch.nn.functional as F
 import torch.nn.parallel.distributed as dist
 
 from slowfast.config.defaults import _C
-from slowfast.utils import misc as misc
 from slowfast.models import optimizer as optim
+from slowfast.models.batchnorm_helper import FrozenBatchNorm3d
 from slowfast.models.head_helper import ResNetBasicHead, ResNetRoIHead
+from slowfast.utils import misc as misc
 
 
 class ProgressTrainer(object):
@@ -17,6 +18,7 @@ class ProgressTrainer(object):
         self.steps = cfg.PGT.STEPS
         self.overlap = cfg.PGT.OVERLAP
         self.num_frames = cfg.PGT.STEP_LEN
+        self.train_together = cfg.PGT.TRAIN_TOGETHER
         self.progress_eval = cfg.PGT.PG_EVAL
         self.ensemble_method = cfg.PGT.ENSEMBLE_METHOD
 
@@ -65,13 +67,20 @@ class ProgressTrainer(object):
             misc.check_nan_losses(loss)
 
             # Perform the backward pass.
-            self.optimizer.zero_grad()
             loss.backward()
-            # Update the parameters.
-            self.optimizer.step()
+
+            if not self.train_together:
+                # Update the parameters for each iter.
+                self.optimizer.step()
+                self.optimizer.zero_grad()
 
             preds.append(pred)
             losses.append(loss.detach())
+
+        if self.train_together:
+            # Update the parameters together.
+            self.optimizer.step()
+            self.optimizer.zero_grad()
 
         preds = pred  # take the last step for train acc/map calucaltion 
         loss_mean = torch.stack(losses, dim=0).mean()
@@ -168,6 +177,10 @@ class ProgressNL(nn.Module):
             )
             # Zero initializing the final bn.
             self.bn.transform_final_bn = zero_init_final_norm
+        elif self.norm_type == "frozen_batchnorm":
+            self.bn = FrozenBatchNorm3d(self.dim, eps=self.norm_eps, momentum=self.norm_momentum)
+            # Zero initializing the final bn.
+            self.bn.transform_final_bn = zero_init_final_norm
         elif self.norm_type == "layernorm":
             # In Caffe2 the LayerNorm op does not contain the scale an bias
             # terms described in the paper:
@@ -242,6 +255,8 @@ class ProgressNL(nn.Module):
         # output
         p = self.conv_out(theta_phi_g)
         if self.norm_type == "batchnorm":
+            p = self.bn(p)
+        elif self.norm_type == "frozen_batchnorm":
             p = self.bn(p)
         elif self.norm_type == "layernorm":
             p = self.ln(p)

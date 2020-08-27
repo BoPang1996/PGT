@@ -209,6 +209,9 @@ _C.PGT.STEPS = 5
 # Number of overlap (propogated) frame.
 _C.PGT.OVERLAP = 1
 
+# Backward after all steps finished.
+_C.PGT.TRAIN_TOGETHER = False
+
 # Progress cache type. Could be "last", "max", "avg"
 _C.PGT.CACHE = "last"
 
