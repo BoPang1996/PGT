@@ -466,7 +466,8 @@ def load_train_checkpoint(cfg, model, optimizer):
         last_checkpoint = get_last_checkpoint(cfg.LOGS.DIR)
         logger.info("Load from last checkpoint, {}.".format(last_checkpoint))
         checkpoint_epoch = load_checkpoint(
-            last_checkpoint, model, cfg.NUM_GPUS > 1, optimizer
+            last_checkpoint, model, cfg.NUM_GPUS > 1, optimizer,
+            transfer_weight=False,
         )
         start_epoch = checkpoint_epoch + 1
     elif cfg.TRAIN.CHECKPOINT_FILE_PATH != "":
