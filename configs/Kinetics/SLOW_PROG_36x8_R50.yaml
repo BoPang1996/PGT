@@ -8,7 +8,7 @@ PGT:
   STEP_LEN: 8
   STEPS: 5
   OVERLAP: 1
-  PG_EVAL: True
+  PG_EVAL: False
 
 SOLVER:
   MAX_EPOCH: 98

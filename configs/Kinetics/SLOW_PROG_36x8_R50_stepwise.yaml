@@ -6,3 +6,6 @@ SOLVER:
   STEPS: [0, 47, 77, 98]
   MAX_EPOCH: 120
   WARMUP_EPOCHS: 17.0
+
+LOGS:
+  DIR: logs/Kinetics/SLOW_PROG_36x8_R50_stepwise
