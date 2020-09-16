@@ -215,6 +215,9 @@ _C.PGT.TRAIN_TOGETHER = False
 # Progress cache type. Could be "last", "max", "avg"
 _C.PGT.CACHE = "last"
 
+# Progress cache momentum.
+_C.PGT.CACHE_MOMENTUM = 0.0
+
 # Progress evaluation.
 _C.PGT.PG_EVAL = False
 

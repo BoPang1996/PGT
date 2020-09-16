@@ -376,9 +376,13 @@ class ResBlock(nn.Module):
         else:
             x = x + self.branch2(x)
         # Remove progress padding and update cache
+        # TODO: not decaying cache, only store last cache
+        # this will improve ~0.1 mAP on Charades
         if self.temp_progress:
             if isinstance(self.cache, torch.Tensor):
                 x = x[:, :, 1:, ...]
+                momentum = _C.PGT.CACHE_MOMENTUM
+                cache = (1 - momentum) * self.cache + momentum * cache
             self.cache = cache
         x = self.relu(x)
         return x
