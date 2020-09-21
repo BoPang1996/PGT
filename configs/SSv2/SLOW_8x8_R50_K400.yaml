@@ -1,27 +1,25 @@
 TRAIN:
   ENABLE: True
-  DATASET: charades
+  DATASET: ssv2
   BATCH_SIZE: 32
   EVAL_PERIOD: 1
-  FULL_TIME_EVAL: True
   CHECKPOINT_PERIOD: 1
   AUTO_RESUME: True
   CHECKPOINT_TYPE: caffe2
   CHECKPOINT_FILE_PATH: /home/pg/data/models/k400/SLOW_8x8_R50.pkl
 
 DATA:
-  NUM_FRAMES: 16
+  NUM_FRAMES: 8
   SAMPLING_RATE: 8
   TRAIN_JITTER_SCALES: [256, 320]
   TRAIN_CROP_SIZE: 224
   TEST_CROP_SIZE: 256
   INPUT_CHANNEL_NUM: [3]
-  MULTI_LABEL: True
   INV_UNIFORM_SAMPLE: True
-  ENSEMBLE_METHOD: max
+  RANDOM_FLIP: False
   REVERSE_INPUT_CHANNEL: True
-  PATH_TO_DATA_DIR: /home/pg/data/Charades/
-  PATH_PREFIX: /home/pg/data/Charades/Charades_v1_rgb
+  PATH_TO_DATA_DIR: /home/pg/data/SSv2/
+  PATH_PREFIX: /home/pg/data/SSv2/20bn-something-something-v2
 
 RESNET:
   ZERO_INIT_FINAL_BN: True
@@ -41,39 +39,37 @@ BN:
   NORM_TYPE: frozen_batchnorm
 
 SOLVER:
-  BASE_LR: 0.075
+  BASE_LR: 2.5e-3
   LR_POLICY: steps_with_relative_lrs
   LRS: [1, 0.1, 0.01]
-  STEPS: [0, 20, 30]
-  MAX_EPOCH: 35
+  STEPS: [0, 14, 18]
+  MAX_EPOCH: 22
   MOMENTUM: 0.9
-  WEIGHT_DECAY: 1e-4
-  WARMUP_EPOCHS: 4.0
-  WARMUP_START_LR: 0.0002
+  WEIGHT_DECAY: 1e-6
+  WARMUP_EPOCHS: 1.0
+  WARMUP_START_LR: 0.0001
   OPTIMIZING_METHOD: sgd
 
 MODEL:
-  NUM_CLASSES: 157
+  NUM_CLASSES: 174
   ARCH: slow
   MODEL_NAME: ResNet
-  LOSS_FUNC: bce_logit
-  HEAD_ACT: sigmoid
+  LOSS_FUNC: cross_entropy
   DROPOUT_RATE: 0.5
-  FINAL_POOL: ["avg", "max"]
 
 TEST:
   ENABLE: True
-  DATASET: charades
+  DATASET: ssv2
   BATCH_SIZE: 32
-  NUM_ENSEMBLE_VIEWS: 10
-  NUM_SPATIAL_CROPS: 3
+  NUM_ENSEMBLE_VIEWS: 1
+  NUM_SPATIAL_CROPS: 1
 
 DATA_LOADER:
   NUM_WORKERS: 4
   PIN_MEMORY: True
 
 LOGS:
-  DIR: logs/Charades/SLOW_16x8_R50_K400/
+  DIR: logs/SSv2/SLOW_8x8_R50_K400/
 
 NUM_GPUS: 2
 NUM_SHARDS: 1

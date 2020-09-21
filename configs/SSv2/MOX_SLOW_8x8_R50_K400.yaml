@@ -1,0 +1,26 @@
+_BASE_: SLOW_8x8_R50_K400.yaml
+
+TRAIN:
+  BATCH_SIZE: 256
+  CHECKPOINT_FILE_PATH: obs://bucket-5006/data/slowfast/models/k400/SLOW_8x8_R50.pkl
+
+DATA:
+  PATH_TO_DATA_DIR: obs://bucket-5006/data/SSv2/
+  PATH_PREFIX: obs://bucket-5006/data/SSv2/20bn-something-something-v2
+
+SOLVER:
+  BASE_LR: 0.02
+  WARMUP_START_LR: 0.0008
+
+TEST:
+  BATCH_SIZE: 256
+
+DATA_LOADER:
+  NUM_WORKERS: 7
+  PIN_MEMORY: False
+
+LOGS:
+  DIR: obs://bucket-5006/penggao/logs/progress-action/SSv2/MOX_SLOW_8x8_K400
+  PERIOD: 50
+
+NUM_GPUS: 8
