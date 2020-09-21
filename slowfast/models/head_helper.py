@@ -5,7 +5,7 @@
 
 import torch
 import torch.nn as nn
-from .detection_helper import ROIAlign
+# from .detection_helper import ROIAlign
 
 
 class ResNetRoIHead(nn.Module):

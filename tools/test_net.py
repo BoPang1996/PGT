@@ -45,7 +45,7 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None, cur_epoch=Non
     test_meter.iter_tic()
 
     if cfg.PGT.ENABLE:
-        pg_trainer = ProgressTrainer(model, cfg)
+        pg_trainer = ProgressTrainer(model, cfg, cur_epoch)
 
     if du.get_world_size() == 1:
         extra_args = {}
@@ -191,3 +191,5 @@ def test(cfg):
     perform_test(test_loader, model, test_meter, cfg, writer)
     if writer is not None:
         writer.close()
+    
+    logger.info(f"Testing completed. Log directory: {cfg.LOGS.DIR}")

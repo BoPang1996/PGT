@@ -11,16 +11,27 @@ from slowfast.utils import misc as misc
 
 
 class ProgressTrainer(object):
-    def __init__(self, model, cfg, optimizer=None, loss_fun=None):
+    def __init__(self, model, cfg, epoch, optimizer=None, loss_fun=None):
         self.model = model
         self.optimizer = optimizer
         self.loss_fun = loss_fun
+
         self.steps = cfg.PGT.STEPS
         self.overlap = cfg.PGT.OVERLAP
         self.num_frames = cfg.PGT.STEP_LEN
         self.train_together = cfg.PGT.TRAIN_TOGETHER
         self.progress_eval = cfg.PGT.PG_EVAL
         self.ensemble_method = cfg.PGT.ENSEMBLE_METHOD
+        self.truncate_grad = cfg.PGT.TRUNCATE_GRAD
+        self.multigrid = cfg.PGT.MULTI_GRID
+
+        if self.multigrid and self.model.training:
+            # keep last epoch unchanged to finetune
+            if epoch != cfg.SOLVER.MAX_EPOCH:
+                self.steps = epoch % cfg.PGT.STEPS + 1
+                new_lr = cfg.PGT.LRS[self.steps - 1]
+                for param_group in self.optimizer.param_groups:
+                    param_group["lr"] = new_lr
 
         if self.model.training or cfg.PGT.PG_EVAL:
             tpool_size = 1
@@ -67,7 +78,7 @@ class ProgressTrainer(object):
             misc.check_nan_losses(loss)
 
             # Perform the backward pass.
-            loss.backward()
+            loss.backward(retain_graph=self.truncate_grad)
 
             if not self.train_together:
                 # Update the parameters for each iter.

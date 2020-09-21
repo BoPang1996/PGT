@@ -572,8 +572,6 @@ class TrainMeter(object):
                 elif k == 'epoch':
                     self.tblogger.add_scalar(
                         'other/epoch', cur_epoch + 1, iters)
-                elif k == 'lr':
-                    self.tblogger.add_scalar('other/lr', v, iters)
                 else:
                     continue
 
@@ -604,6 +602,8 @@ class TrainMeter(object):
             stats["top5_err"] = top5_err
             stats["loss"] = avg_loss
         logging.log_json_stats(stats)
+        if du.is_master_proc():
+            self.tblogger.add_scalar('other/lr', self.lr, cur_epoch + 1)
 
 
 class ValMeter(object):

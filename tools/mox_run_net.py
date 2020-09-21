@@ -36,8 +36,8 @@ def pip_install_directory(local_dir_path):
 
 
 if __name__ == "__main__":
-    compile_custom()
-    print("Compile custom CUDA layers finished!")
+    # compile_custom()
+    # print("Compile custom CUDA layers finished!")
 
     # TODO: set as config
     PIP_S3_PATH = "obs://bucket-5006/penggao/pip_packages"

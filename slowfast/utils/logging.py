@@ -36,7 +36,7 @@ def setup_logger(save_dir, name=None):
     # don't log results for the non-master process
     if not du.is_master_proc():
         _suppress_print()
-        return None
+        return logger
     formatter = logging.Formatter(
         "%(asctime)s [%(levelname)s: %(filename)s: %(lineno)4d]: %(message)s")
 

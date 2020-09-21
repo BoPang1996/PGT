@@ -361,16 +361,15 @@ class ResBlock(nn.Module):
         if self.temp_progress:
             # FIXME: when pooling
             if x.size(2) < _C.PGT.STEP_LEN: # pg step
-                assert isinstance(self.cache, torch.Tensor)
                 x = torch.cat([self.cache, x], dim=2)
             else: # reset cache
                 self.cache = None
             if _C.PGT.CACHE == "last":
-                cache = x[:, :, -1, ...].detach().unsqueeze(2)
+                cache = x[:, :, -1, ...].unsqueeze(2)
             elif _C.PGT.CACHE == "max":
-                cache = F.max_pool3d(x, (x.size(2), 1, 1), 1).detach()
+                cache = F.max_pool3d(x, (x.size(2), 1, 1), 1)
             elif _C.PGT.CACHE == "avg":
-                cache = F.avg_pool3d(x, (x.size(2), 1, 1), 1).detach()
+                cache = F.avg_pool3d(x, (x.size(2), 1, 1), 1)
         if hasattr(self, "branch1"):
             x = self.branch1_bn(self.branch1(x)) + self.branch2(x)
         else:
@@ -382,8 +381,8 @@ class ResBlock(nn.Module):
             if isinstance(self.cache, torch.Tensor):
                 x = x[:, :, 1:, ...]
                 momentum = _C.PGT.CACHE_MOMENTUM
-                cache = (1 - momentum) * self.cache + momentum * cache
-            self.cache = cache
+                cache = (1 - momentum) * cache + momentum * self.cache
+            self.cache = cache if _C.PGT.TRUNCATE_GRAD else cache.detach()
         x = self.relu(x)
         return x
 

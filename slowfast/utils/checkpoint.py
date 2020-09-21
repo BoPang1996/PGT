@@ -480,7 +480,7 @@ def load_train_checkpoint(cfg, model, optimizer):
             optimizer,
             inflation=cfg.TRAIN.CHECKPOINT_INFLATE,
             convert_from_caffe2=cfg.TRAIN.CHECKPOINT_TYPE == "caffe2",
-            transfer_weight=cfg.TRAIN.CHECKPOINT_TRANSFER_WEIGHT,
+            transfer_weight=cfg.TRAIN.TRANSFER_WEIGHT,
         )
         start_epoch = checkpoint_epoch + 1
     else:

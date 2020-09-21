@@ -66,7 +66,7 @@ _C.TRAIN.CHECKPOINT_FILE_PATH = ""
 _C.TRAIN.CHECKPOINT_TYPE = "pytorch"
 
 # If True, only transfer weight when loading checkpoint.
-_C.TRAIN.CHECKPOINT_TRANSFER_WEIGHT = True
+_C.TRAIN.TRANSFER_WEIGHT = True
 
 # If True, perform inflation when loading checkpoint.
 _C.TRAIN.CHECKPOINT_INFLATE = False
@@ -227,6 +227,14 @@ _C.PGT.ENSEMBLE_METHOD = "sum"
 # Norm type for progress NL. Could be "none", "batchnorm", "layernorm"
 _C.PGT.NL_NORM = "batchnorm"
 
+# Truncate backward pass so gradient will accumulate for temporal layers.
+_C.PGT.TRUNCATE_GRAD = False
+
+# Multi-grid scheduler, which dynamically changes progress steps and lr.
+_C.PGT.MULTI_GRID = False
+
+# Learning rate for different #steps. Only used when MULTI_GRID is True
+_C.PGT.LRS = []
 
 # -----------------------------------------------------------------------------
 # Model options
@@ -727,6 +735,9 @@ def _assert_and_infer_cfg(cfg):
         assert (cfg.PGT.STEP_LEN - cfg.PGT.OVERLAP) * \
             (cfg.PGT.STEPS - 1) + \
             cfg.PGT.STEP_LEN == cfg.DATA.NUM_FRAMES
+        
+        if cfg.PGT.MULTI_GRID:
+            assert len(cfg.PGT.LRS) == cfg.PGT.STEPS
 
     # General assertions.
     assert cfg.SHARD_ID < cfg.NUM_SHARDS

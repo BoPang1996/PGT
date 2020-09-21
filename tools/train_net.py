@@ -52,7 +52,7 @@ def train_epoch(
     loss_fun = losses.get_loss_func(cfg.MODEL.LOSS_FUNC)(reduction="mean")
 
     if cfg.PGT.ENABLE:
-        pg_trainer = ProgressTrainer(model, cfg, optimizer, loss_fun)
+        pg_trainer = ProgressTrainer(model, cfg, cur_epoch, optimizer, loss_fun)
 
     for cur_iter, (inputs, labels, _, meta) in enumerate(train_loader):
         # Transfer the data to the current GPU device.
@@ -188,7 +188,7 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
     val_meter.iter_tic()
 
     if cfg.PGT.ENABLE:
-        pg_trainer = ProgressTrainer(model, cfg)
+        pg_trainer = ProgressTrainer(model, cfg, cur_epoch)
 
     if du.get_world_size() == 1:
         extra_args = {}
@@ -392,6 +392,8 @@ def train(cfg):
     model = build_model(cfg)
     if du.is_master_proc() and cfg.LOGS.LOG_MODEL:
         misc.log_model_info(model, cfg, use_train_input=True)
+    if du.is_master_proc():
+        logger.info("Model:\n{}".format(model))
 
     # Construct the optimizer.
     optimizer = optim.construct_optimizer(model, cfg)
@@ -503,3 +505,5 @@ def train(cfg):
 
     if writer is not None:
         writer.close()
+
+    logger.info(f"Training completed. Log directory: {cfg.LOGS.DIR}")
