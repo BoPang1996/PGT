@@ -60,19 +60,12 @@ def parse_args():
     parser.add_argument("--data_url", help="No use", type=str)
     parser.add_argument("--train_url", help="No use", type=str)
     parser.add_argument("--lr", help="No use", type=float)
-    # options
-    parser.add_argument(
-        "opts",
-        help="See slowfast/config/defaults.py for all options",
-        default=None,
-        nargs=argparse.REMAINDER,
-    )
     if len(sys.argv) == 1:
         parser.print_help()
-    return parser.parse_args()
+    return parser.parse_known_args()
 
 
-def load_config(args):
+def load_config(args, opts=None):
     """
     Given the arguemnts, load and initialize the configs.
     Args:
@@ -85,8 +78,8 @@ def load_config(args):
     if args.cfg_file is not None:
         cfg.merge_from_file(args.cfg_file)
     # Load config from command line, overwrite config from opts.
-    if args.opts is not None:
-        cfg.merge_from_list(args.opts)
+    if opts is not None:
+        cfg.merge_from_list(opts)
 
     # Inherit parameters from args.
     if hasattr(args, "num_shards") and hasattr(args, "shard_id"):

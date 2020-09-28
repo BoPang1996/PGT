@@ -13,8 +13,8 @@ def main():
     """
     Main function to spawn the train and test process.
     """
-    args = parse_args()
-    cfg = load_config(args)
+    args, opts = parse_args()
+    cfg = load_config(args, opts)
 
     # Perform training.
     if cfg.TRAIN.ENABLE:
