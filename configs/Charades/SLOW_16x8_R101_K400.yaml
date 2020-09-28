@@ -1,7 +1,7 @@
 TRAIN:
   ENABLE: True
   DATASET: charades
-  BATCH_SIZE: 32
+  BATCH_SIZE: 16
   EVAL_PERIOD: 1
   FULL_TIME_EVAL: True
   CHECKPOINT_PERIOD: 1
@@ -10,7 +10,7 @@ TRAIN:
   CHECKPOINT_FILE_PATH: /home/pg/projects/action/progress-action/logs/Kinetics/MOX2_SLOW_8x8_R101.75.76/checkpoints/checkpoint_epoch_00196.pyth
 
 DATA:
-  NUM_FRAMES: 8
+  NUM_FRAMES: 16
   SAMPLING_RATE: 8
   TRAIN_JITTER_SCALES: [256, 320]
   TRAIN_CROP_SIZE: 224
@@ -41,7 +41,7 @@ BN:
   NORM_TYPE: frozen_batchnorm
 
 SOLVER:
-  BASE_LR: 0.075
+  BASE_LR: 0.0375
   LR_POLICY: steps_with_relative_lrs
   LRS: [1, 0.1, 0.01]
   STEPS: [0, 20, 30]
@@ -49,7 +49,7 @@ SOLVER:
   MOMENTUM: 0.9
   WEIGHT_DECAY: 1e-4
   WARMUP_EPOCHS: 4.0
-  WARMUP_START_LR: 0.0002
+  WARMUP_START_LR: 0.0001
   OPTIMIZING_METHOD: sgd
 
 MODEL:
@@ -64,7 +64,7 @@ MODEL:
 TEST:
   ENABLE: True
   DATASET: charades
-  BATCH_SIZE: 32
+  BATCH_SIZE: 16
   NUM_ENSEMBLE_VIEWS: 10
   NUM_SPATIAL_CROPS: 3
 
@@ -73,7 +73,7 @@ DATA_LOADER:
   PIN_MEMORY: True
 
 LOGS:
-  DIR: logs/Charades/SLOW_8x8_R101_K400/
+  DIR: logs/Charades/SLOW_16x8_R101_K400/
 
 NUM_GPUS: 2
 NUM_SHARDS: 1
