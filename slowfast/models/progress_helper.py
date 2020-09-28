@@ -11,7 +11,15 @@ from slowfast.utils import misc as misc
 
 
 class ProgressTrainer(object):
-    def __init__(self, model, cfg, epoch, optimizer=None, loss_fun=None):
+    def __init__(
+        self,
+        model,
+        cfg,
+        epoch,
+        optimizer=None,
+        loss_fun=None,
+        tblogger=None,
+    ):
         self.model = model
         self.optimizer = optimizer
         self.loss_fun = loss_fun
@@ -23,15 +31,33 @@ class ProgressTrainer(object):
         self.progress_eval = cfg.PGT.PG_EVAL
         self.ensemble_method = cfg.PGT.ENSEMBLE_METHOD
         self.truncate_grad = cfg.PGT.TRUNCATE_GRAD
-        self.multigrid = cfg.PGT.MULTI_GRID
+        self.tblogger = tblogger
+
+        self.multigrid = cfg.PGT.MGRID
+        self.mgrid_steps = cfg.PGT.MGRID_STEPS
+        self.mgrid_step_len = cfg.PGT.MGRID_STEP_LEN
+        self.mgrid_lr_scales = cfg.PGT.MGRID_LRSCALES
+        self.max_epoch = cfg.SOLVER.MAX_EPOCH
 
         if self.multigrid and self.model.training:
-            # keep last epoch unchanged to finetune
-            if epoch != cfg.SOLVER.MAX_EPOCH:
-                self.steps = epoch % cfg.PGT.STEPS + 1
-                new_lr = cfg.PGT.LRS[self.steps - 1]
-                for param_group in self.optimizer.param_groups:
-                    param_group["lr"] = new_lr
+            # keep last epoch hyper-params align with non-multigrid setting
+            # to finetune (in cfg.SOLVER)
+            if epoch != cfg.SOLVER.MAX_EPOCH - 1:
+                self.n_schedule = len(self.mgrid_steps)
+                cur_idx = epoch % self.n_schedule
+                self.steps = self.mgrid_steps[cur_idx]
+                self.num_frames = self.mgrid_step_len[cur_idx]
+            else:
+                self.steps = cfg.PGT.STEPS
+                self.num_frames = cfg.PGT.STEP_LEN
+
+            for m in self.model.modules():
+                if m._get_name() == "ResBlock":
+                    m.update_nframes(self.num_frames)
+
+            if self.tblogger:
+                self.tblogger.add_scalar("mgrid/steps", self.steps, epoch + 1)
+                self.tblogger.add_scalar("mgrid/nframes", self.num_frames, epoch + 1)
 
         if self.model.training or cfg.PGT.PG_EVAL:
             tpool_size = 1
@@ -93,7 +119,7 @@ class ProgressTrainer(object):
             self.optimizer.step()
             self.optimizer.zero_grad()
 
-        preds = pred  # take the last step for train acc/map calucaltion 
+        preds = pred  # take the last step for train acc/map calucaltion
         loss_mean = torch.stack(losses, dim=0).mean()
         return preds, loss_mean
 
@@ -113,7 +139,8 @@ class ProgressTrainer(object):
                     start_idx = 0
                     end_idx = self.num_frames
                 else:
-                    start_idx = step * self.num_frames - (step - 1) * self.overlap
+                    start_idx = step * self.num_frames - \
+                        (step - 1) * self.overlap
                     end_idx = start_idx + self.num_frames - self.overlap
                 pg_input = [inputs[0][:, :, start_idx:end_idx]]
 
@@ -132,6 +159,16 @@ class ProgressTrainer(object):
 
         return preds
 
+    def set_lr(self, lr, epoch, global_step):
+        if epoch != self.max_epoch - 1 and self.multigrid:
+            self.n_schedule = len(self.mgrid_steps)
+            cur_idx = epoch % self.n_schedule
+            scale = self.mgrid_lr_scales[cur_idx]
+            for param_group in self.optimizer.param_groups:
+                param_group["lr"] = lr * scale
+        if self.tblogger:
+            lr = self.optimizer.param_groups[0]["lr"]
+            self.tblogger.add_scalar("mgrid/lr", lr, global_step)
 
 class ProgressNL(nn.Module):
     def __init__(
@@ -189,7 +226,8 @@ class ProgressNL(nn.Module):
             # Zero initializing the final bn.
             self.bn.transform_final_bn = zero_init_final_norm
         elif self.norm_type == "frozen_batchnorm":
-            self.bn = FrozenBatchNorm3d(self.dim, eps=self.norm_eps, momentum=self.norm_momentum)
+            self.bn = FrozenBatchNorm3d(
+                self.dim, eps=self.norm_eps, momentum=self.norm_momentum)
             # Zero initializing the final bn.
             self.bn.transform_final_bn = zero_init_final_norm
         elif self.norm_type == "layernorm":

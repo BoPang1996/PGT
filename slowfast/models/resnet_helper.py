@@ -313,6 +313,8 @@ class ResBlock(nn.Module):
         )
         self.temp_progress = temp_progress
         self.cache = None
+        if self.temp_progress:
+            self.nframes = _C.PGT.STEP_LEN
 
     def _construct(
         self,
@@ -356,11 +358,16 @@ class ResBlock(nn.Module):
         )
         self.relu = nn.ReLU(self._inplace_relu)
 
+    def update_nframes(self, nframes):
+        assert self.temp_progress
+        self.nframes = nframes
+
     def forward(self, x):
         # Progress padding
         if self.temp_progress:
-            # FIXME: when pooling
-            if x.size(2) < _C.PGT.STEP_LEN: # pg step
+            # FIXME: it's possible the intermediate feature map's T has been
+            # pooled. Current implmentation only supports slow and slowfast.
+            if x.size(2) < self.nframes: # pg step
                 x = torch.cat([self.cache, x], dim=2)
             else: # reset cache
                 self.cache = None

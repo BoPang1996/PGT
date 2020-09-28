@@ -110,11 +110,25 @@ class Charades(torch.utils.data.Dataset):
             )
         )
 
+        if self.cfg.PGT.ENABLE:
+            self.step_len = self.cfg.PGT.STEP_LEN
+            self.steps = self.cfg.PGT.STEPS
+            # 5 x 8 - (5 - 1) = 40 - 4 = 36
+            self.num_frames = self.steps * self.step_len - (self.steps - 1)
+
         logger.info(
             "Charades dataloader constructed (size: {}) from {}".format(
                 len(self._path_to_videos), path_to_file
             )
         )
+
+    def update_mgrid(self, epoch):
+        n_schedule = len(self.cfg.PGT.MGRID_STEPS)
+        if n_schedule > 0:
+            cur_idx = epoch % n_schedule
+            self.step_len = self.cfg.PGT.MGRID_STEP_LEN[cur_idx]
+            self.steps = self.cfg.PGT.MGRID_STEPS[cur_idx]
+            self.num_frames = self.steps * self.step_len - (self.steps - 1)
 
     def __getitem__(self, index):
         """
@@ -175,7 +189,10 @@ class Charades(torch.utils.data.Dataset):
                 "Does not support {} mode".format(self.mode)
             )
 
-        num_frames = self.cfg.DATA.NUM_FRAMES
+        if self.cfg.PGT.ENABLE:
+            num_frames = self.num_frames
+        else:
+            num_frames = self.cfg.DATA.NUM_FRAMES
         sampling_rate = utils.get_random_sampling_rate(
             self.cfg.MULTIGRID.LONG_CYCLE_SAMPLING_RATE,
             self.cfg.DATA.SAMPLING_RATE,
@@ -211,10 +228,9 @@ class Charades(torch.utils.data.Dataset):
         )
 
         if self.cfg.PGT.ENABLE and self.mode == "train":
-            step = self.cfg.PGT.STEP_LEN
             label = [
-                utils.aggregate_labels(self._labels[index][seq[i]:seq[i+step-1]+1])
-                for i in range(0, len(seq) - 1, step - 1)
+                utils.aggregate_labels(self._labels[index][seq[i]:seq[i+self.step_len-1]+1])
+                for i in range(0, len(seq) - 1, self.step_len - 1)
             ]
             label = torch.as_tensor(
                 [utils.as_binary_vector(l, self.cfg.MODEL.NUM_CLASSES)

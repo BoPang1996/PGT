@@ -231,10 +231,17 @@ _C.PGT.NL_NORM = "batchnorm"
 _C.PGT.TRUNCATE_GRAD = False
 
 # Multi-grid scheduler, which dynamically changes progress steps and lr.
-_C.PGT.MULTI_GRID = False
+_C.PGT.MGRID = False
 
-# Learning rate for different #steps. Only used when MULTI_GRID is True
-_C.PGT.LRS = []
+# Learning rate scale different #steps. Only used when MGRID is True
+_C.PGT.MGRID_LRSCALES = []
+
+# Number of progress step len. Only used when MGRID is True. 
+_C.PGT.MGRID_STEP_LEN = []
+
+# Number of progress steps. Only used when MGRID is True. 
+_C.PGT.MGRID_STEPS = []
+
 
 # -----------------------------------------------------------------------------
 # Model options
@@ -736,8 +743,9 @@ def _assert_and_infer_cfg(cfg):
             (cfg.PGT.STEPS - 1) + \
             cfg.PGT.STEP_LEN == cfg.DATA.NUM_FRAMES
         
-        if cfg.PGT.MULTI_GRID:
-            assert len(cfg.PGT.LRS) == cfg.PGT.STEPS
+        if cfg.PGT.MGRID:
+            assert len(cfg.PGT.MGRID_LRS) == len(cfg.PGT.MGRID_STEPS)
+            assert len(cfg.PGT.MGRID_STEPS) == len(cfg.PGT.MGRID_STEP_LEN)
 
     # General assertions.
     assert cfg.SHARD_ID < cfg.NUM_SHARDS

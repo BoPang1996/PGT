@@ -52,7 +52,11 @@ def train_epoch(
     loss_fun = losses.get_loss_func(cfg.MODEL.LOSS_FUNC)(reduction="mean")
 
     if cfg.PGT.ENABLE:
-        pg_trainer = ProgressTrainer(model, cfg, cur_epoch, optimizer, loss_fun)
+        pg_trainer = ProgressTrainer(
+            model, cfg, cur_epoch, optimizer, loss_fun,
+            tblogger=train_meter.tblogger,
+        )
+        train_loader.dataset.update_mgrid(cur_epoch)
 
     for cur_iter, (inputs, labels, _, meta) in enumerate(train_loader):
         # Transfer the data to the current GPU device.
@@ -72,6 +76,8 @@ def train_epoch(
         # Update the learning rate.
         lr = optim.get_epoch_lr(cur_epoch + float(cur_iter) / data_size, cfg)
         optim.set_lr(optimizer, lr)
+        if cfg.PGT.ENABLE:
+            pg_trainer.set_lr(lr, cur_epoch, data_size * cur_epoch + cur_iter)
 
         if not cfg.PGT.ENABLE:
             if cfg.DETECTION.ENABLE:
@@ -146,14 +152,16 @@ def train_epoch(
             train_meter.iter_toc()
             # Update and log stats.
             train_meter.update_stats(
-                top1_err, top5_err, loss, lr, inputs[0].size(0) * cfg.NUM_GPUS
+                top1_err, top5_err, loss, 
+                optimizer.param_groups[0]["lr"],
+                inputs[0].size(0) * cfg.NUM_GPUS
             )
             # write to tensorboard format if available.
             if writer is not None:
                 writer.add_scalars(
                     {
                         "Train/loss": loss,
-                        "Train/lr": lr,
+                        "Train/lr": optimizer.param_groups[0]["lr"],
                         "Train/Top1_err": top1_err,
                         "Train/Top5_err": top5_err,
                     },
@@ -224,12 +232,14 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
 
             if cfg.NUM_GPUS > 1:
                 preds = torch.cat(du.all_gather_unaligned(preds), dim=0)
-                ori_boxes = torch.cat(du.all_gather_unaligned(ori_boxes), dim=0)
+                ori_boxes = torch.cat(
+                    du.all_gather_unaligned(ori_boxes), dim=0)
                 metadata = torch.cat(du.all_gather_unaligned(metadata), dim=0)
 
             val_meter.iter_toc()
             # Update and log stats.
-            val_meter.update_stats(preds.cpu(), ori_boxes.cpu(), metadata.cpu())
+            val_meter.update_stats(
+                preds.cpu(), ori_boxes.cpu(), metadata.cpu())
 
         else:
             if not cfg.PGT.ENABLE:
@@ -242,7 +252,8 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
                     preds, labels = du.all_gather([preds, labels])
             else:
                 # Compute the errors.
-                num_topks_correct = metrics.topks_correct(preds, labels, (1, 5))
+                num_topks_correct = metrics.topks_correct(
+                    preds, labels, (1, 5))
 
                 # Combine the errors across the GPUs.
                 top1_err, top5_err = [
@@ -392,8 +403,6 @@ def train(cfg):
     model = build_model(cfg)
     if du.is_master_proc() and cfg.LOGS.LOG_MODEL:
         misc.log_model_info(model, cfg, use_train_input=True)
-    if du.is_master_proc():
-        logger.info("Model:\n{}".format(model))
 
     # Construct the optimizer.
     optimizer = optim.construct_optimizer(model, cfg)

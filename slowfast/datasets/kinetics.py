@@ -109,11 +109,26 @@ class Kinetics(torch.utils.data.Dataset):
         ), "Failed to load Kinetics split {} from {}".format(
             self._split_idx, path_to_file
         )
+
+        if self.cfg.PGT.ENABLE:
+            self.step_len = self.cfg.PGT.STEP_LEN
+            self.steps = self.cfg.PGT.STEPS
+            # 5 x 8 - (5 - 1) = 40 - 4 = 36
+            self.num_frames = self.steps * self.step_len - (self.steps - 1)
+
         logger.info(
             "Constructing kinetics dataloader (size: {}) from {}".format(
                 len(self._path_to_videos), path_to_file
             )
         )
+
+    def update_mgrid(self, epoch):
+        n_schedule = len(self.cfg.PGT.MGRID_STEPS)
+        if n_schedule > 0:    
+            cur_idx = epoch % n_schedule
+            self.step_len = self.cfg.PGT.MGRID_STEP_LEN[cur_idx]
+            self.steps = self.cfg.PGT.MGRID_STEPS[cur_idx]
+            self.num_frames = self.steps * self.step_len - (self.steps - 1)
 
     def __getitem__(self, index):
         """
@@ -204,11 +219,16 @@ class Kinetics(torch.utils.data.Dataset):
                 index = random.randint(0, len(self._path_to_videos) - 1)
                 continue
 
+            if self.cfg.PGT.ENABLE:
+                num_frames = self.num_frames
+            else:
+                num_frames = self.cfg.DATA.NUM_FRAMES
+
             # Decode video. Meta info is used to perform selective decoding.
             frames = decoder.decode(
                 video_container,
                 sampling_rate,
-                self.cfg.DATA.NUM_FRAMES,
+                num_frames,
                 temporal_sample_index,
                 self.cfg.TEST.NUM_ENSEMBLE_VIEWS,
                 video_meta=self._video_meta[index],
