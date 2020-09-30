@@ -236,12 +236,14 @@ _C.PGT.MGRID = False
 # Learning rate scale different #steps. Only used when MGRID is True
 _C.PGT.MGRID_LRSCALES = []
 
-# Number of progress step len. Only used when MGRID is True. 
+# Number of progress step len. Only used when MGRID is True.
 _C.PGT.MGRID_STEP_LEN = []
 
-# Number of progress steps. Only used when MGRID is True. 
+# Number of progress steps. Only used when MGRID is True.
 _C.PGT.MGRID_STEPS = []
 
+# Finetune at last epoch or not. Only used when MGRID is True.
+_C.PGT.MGRID_NO_FINETUNE = False
 
 # -----------------------------------------------------------------------------
 # Model options
@@ -261,7 +263,8 @@ _C.MODEL.NUM_CLASSES = 400
 _C.MODEL.LOSS_FUNC = "cross_entropy"
 
 # Model architectures that has one single pathway.
-_C.MODEL.SINGLE_PATHWAY_ARCH = ["c2d", "c2d_nopool", "i3d", "i3d_nopool", "slow", "r3d"]
+_C.MODEL.SINGLE_PATHWAY_ARCH = [
+    "c2d", "c2d_nopool", "i3d", "i3d_nopool", "slow", "r3d"]
 
 # Model architectures that has multiple pathways.
 _C.MODEL.MULTI_PATHWAY_ARCH = ["slowfast"]
@@ -424,7 +427,7 @@ _C.SOLVER.OPTIMIZING_METHOD = "sgd"
 
 _C.LOGS = CfgNode()
 
- # Output basedir.
+# Output basedir.
 _C.LOGS.DIR = './logs'
 
 # Log period in iters.
@@ -742,7 +745,7 @@ def _assert_and_infer_cfg(cfg):
         assert (cfg.PGT.STEP_LEN - cfg.PGT.OVERLAP) * \
             (cfg.PGT.STEPS - 1) + \
             cfg.PGT.STEP_LEN == cfg.DATA.NUM_FRAMES
-        
+
         if cfg.PGT.MGRID:
             assert len(cfg.PGT.MGRID_LRS) == len(cfg.PGT.MGRID_STEPS)
             assert len(cfg.PGT.MGRID_STEPS) == len(cfg.PGT.MGRID_STEP_LEN)

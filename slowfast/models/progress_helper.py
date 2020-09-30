@@ -37,12 +37,13 @@ class ProgressTrainer(object):
         self.mgrid_steps = cfg.PGT.MGRID_STEPS
         self.mgrid_step_len = cfg.PGT.MGRID_STEP_LEN
         self.mgrid_lr_scales = cfg.PGT.MGRID_LRSCALES
+        self.mgrid_noft = cfg.PGT.MGRID_NO_FINETUNE
         self.max_epoch = cfg.SOLVER.MAX_EPOCH
 
         if self.multigrid and self.model.training:
             # keep last epoch hyper-params align with non-multigrid setting
             # to finetune (in cfg.SOLVER)
-            if epoch != cfg.SOLVER.MAX_EPOCH - 1:
+            if epoch != cfg.SOLVER.MAX_EPOCH - 1 or self.mgrid_noft:
                 self.n_schedule = len(self.mgrid_steps)
                 cur_idx = epoch % self.n_schedule
                 self.steps = self.mgrid_steps[cur_idx]
@@ -160,12 +161,13 @@ class ProgressTrainer(object):
         return preds
 
     def set_lr(self, lr, epoch, global_step):
-        if epoch != self.max_epoch - 1 and self.multigrid:
-            self.n_schedule = len(self.mgrid_steps)
-            cur_idx = epoch % self.n_schedule
-            scale = self.mgrid_lr_scales[cur_idx]
-            for param_group in self.optimizer.param_groups:
-                param_group["lr"] = lr * scale
+        if self.multigrid:
+            if epoch != self.max_epoch - 1 or self.mgrid_noft:
+                self.n_schedule = len(self.mgrid_steps)
+                cur_idx = epoch % self.n_schedule
+                scale = self.mgrid_lr_scales[cur_idx]
+                for param_group in self.optimizer.param_groups:
+                    param_group["lr"] = lr * scale
         if self.tblogger:
             lr = self.optimizer.param_groups[0]["lr"]
             self.tblogger.add_scalar("mgrid/lr", lr, global_step)
