@@ -43,12 +43,20 @@ def pip_install_list(filelist):
 def pip_install_directory(local_dir_path):
     with open(os.path.join(local_dir_path, "install_list.txt"), 'r') as list_file:
         for package in list_file:
-            subprocess.call([
-                sys.executable, "-m", "pip", "install", "-U",
-                "--index-url=http://100.125.2.97:8888/repository/pypi/simple",
-                "--trusted-host=100.125.2.97",
-                os.path.join(local_dir_path, package.strip())
-            ])
+            if "PyYAML" in package:
+                subprocess.call([
+                    sys.executable, "-m", "pip", "install", "--ignore-installed",
+                    "--index-url=http://100.125.2.97:8888/repository/pypi/simple",
+                    "--trusted-host=100.125.2.97",
+                    os.path.join(local_dir_path, package.strip())
+                ])
+            else:
+                subprocess.call([
+                    sys.executable, "-m", "pip", "install", "-U",
+                    "--index-url=http://100.125.2.97:8888/repository/pypi/simple",
+                    "--trusted-host=100.125.2.97",
+                    os.path.join(local_dir_path, package.strip())
+                ])
 
 
 if __name__ == "__main__":

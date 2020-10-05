@@ -1,0 +1,23 @@
+_BASE_: SLOW_8x8_R101.yaml
+
+TRAIN:
+  BATCH_SIZE: 128
+
+DATA:
+  PATH_TO_DATA_DIR: obs://video-understanding-shanghai/penggao/data/Kinetics/
+  PATH_PREFIX: obs://video-understanding-shanghai/poli/datasets/Kinetics/
+SOLVER:
+  BASE_LR: 0.4
+  WARMUP_START_LR: 0.04
+
+TEST:
+  BATCH_SIZE: 128
+
+DATA_LOADER:
+  NUM_WORKERS: 7
+  PIN_MEMORY: False
+
+LOGS:
+  DIR: obs://video-understanding-shanghai/penggao/logs/progress-action/Kinetics/MOX2_SLOW_8x8_R101
+
+NUM_SHARDS: 2
