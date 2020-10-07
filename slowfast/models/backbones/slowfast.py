@@ -5,6 +5,7 @@ from functools import partial
 
 import slowfast.utils.weight_init_helper as init_helper
 from slowfast.models.batchnorm_helper import get_norm
+from slowfast.config.defaults import _C
 
 from .. import head_helper, resnet_helper, stem_helper, nonlocal_helper
 from ..build import MODEL_REGISTRY
@@ -67,6 +68,9 @@ class FuseFastToSlow(nn.Module):
         fuse = self.conv_f2s(x_f)
         fuse = self.bn(fuse)
         fuse = self.relu(fuse)
+        if fuse.size(2) > x_s.size(2):
+            assert _C.PGT.ENABLE
+            fuse = fuse[:, :, 1:, ...]
         x_s_fuse = torch.cat([x_s, fuse], 1)
         return [x_s_fuse, x_f]
 
@@ -162,10 +166,12 @@ class SlowFast(nn.Module):
             nonlocal_group=cfg.NONLOCAL.GROUP[0],
             nonlocal_pool=cfg.NONLOCAL.POOL[0],
             nonlocal_use_bn=cfg.NONLOCAL.USE_BN,
+            nonlocal_progress=cfg.NONLOCAL.PROGRESS,
             instantiation=cfg.NONLOCAL.INSTANTIATION,
             trans_func_name=cfg.RESNET.TRANS_FUNC,
             dilation=cfg.RESNET.SPATIAL_DILATIONS[0],
             norm_module=self.norm_module,
+            temp_progress=cfg.PGT.ENABLE,
         )
         self.s2_fuse = FuseFastToSlow(
             width_per_group * 4 // cfg.SLOWFAST.BETA_INV,
@@ -202,10 +208,12 @@ class SlowFast(nn.Module):
             nonlocal_group=cfg.NONLOCAL.GROUP[1],
             nonlocal_pool=cfg.NONLOCAL.POOL[1],
             nonlocal_use_bn=cfg.NONLOCAL.USE_BN,
+            nonlocal_progress=cfg.NONLOCAL.PROGRESS,
             instantiation=cfg.NONLOCAL.INSTANTIATION,
             trans_func_name=cfg.RESNET.TRANS_FUNC,
             dilation=cfg.RESNET.SPATIAL_DILATIONS[1],
             norm_module=self.norm_module,
+            temp_progress=cfg.PGT.ENABLE,
         )
         self.s3_fuse = FuseFastToSlow(
             width_per_group * 8 // cfg.SLOWFAST.BETA_INV,
@@ -234,10 +242,12 @@ class SlowFast(nn.Module):
             nonlocal_group=cfg.NONLOCAL.GROUP[2],
             nonlocal_pool=cfg.NONLOCAL.POOL[2],
             nonlocal_use_bn=cfg.NONLOCAL.USE_BN,
+            nonlocal_progress=cfg.NONLOCAL.PROGRESS,
             instantiation=cfg.NONLOCAL.INSTANTIATION,
             trans_func_name=cfg.RESNET.TRANS_FUNC,
             dilation=cfg.RESNET.SPATIAL_DILATIONS[2],
             norm_module=self.norm_module,
+            temp_progress=cfg.PGT.ENABLE,
         )
         self.s4_fuse = FuseFastToSlow(
             width_per_group * 16 // cfg.SLOWFAST.BETA_INV,
@@ -266,10 +276,12 @@ class SlowFast(nn.Module):
             nonlocal_group=cfg.NONLOCAL.GROUP[3],
             nonlocal_pool=cfg.NONLOCAL.POOL[3],
             nonlocal_use_bn=cfg.NONLOCAL.USE_BN,
+            nonlocal_progress=cfg.NONLOCAL.PROGRESS,
             instantiation=cfg.NONLOCAL.INSTANTIATION,
             trans_func_name=cfg.RESNET.TRANS_FUNC,
             dilation=cfg.RESNET.SPATIAL_DILATIONS[3],
             norm_module=self.norm_module,
+            temp_progress=cfg.PGT.ENABLE,
         )
 
         if cfg.DETECTION.ENABLE:
@@ -302,9 +314,7 @@ class SlowFast(nn.Module):
                     width_per_group * 32 // cfg.SLOWFAST.BETA_INV,
                 ],
                 num_classes=cfg.MODEL.NUM_CLASSES,
-                pool_size=[None, None]
-                if cfg.MULTIGRID.SHORT_CYCLE
-                else [
+                pool_size=[
                     [
                         cfg.DATA.NUM_FRAMES
                         // cfg.SLOWFAST.ALPHA
@@ -317,7 +327,8 @@ class SlowFast(nn.Module):
                         cfg.DATA.CROP_SIZE // 32 // pool_size[1][1],
                         cfg.DATA.CROP_SIZE // 32 // pool_size[1][2],
                     ],
-                ],  # None for AdaptiveAvgPool3d((1, 1, 1))
+                ],
+                pool_type=cfg.MODEL.FINAL_POOL,
                 dropout_rate=cfg.MODEL.DROPOUT_RATE,
                 act_func=cfg.MODEL.HEAD_ACT,
             )

@@ -40,9 +40,13 @@ class ProgressTrainer(object):
         self.mgrid_noft = cfg.PGT.MGRID_NO_FINETUNE
         self.max_epoch = cfg.SOLVER.MAX_EPOCH
 
+        self.single_pathway = cfg.MODEL.ARCH in cfg.MODEL.SINGLE_PATHWAY_ARCH
+
+        # TODO: support multi-pathway multigrid
         if self.multigrid and self.model.training:
             # keep last epoch hyper-params align with non-multigrid setting
             # to finetune (in cfg.SOLVER)
+            # FIXME: fit slowfast
             if epoch != cfg.SOLVER.MAX_EPOCH - 1 or self.mgrid_noft:
                 self.n_schedule = len(self.mgrid_steps)
                 cur_idx = epoch % self.n_schedule
@@ -61,20 +65,28 @@ class ProgressTrainer(object):
                 self.tblogger.add_scalar("mgrid/nframes", self.num_frames, epoch + 1)
 
         if self.model.training or cfg.PGT.PG_EVAL:
-            tpool_size = 1
+            tpool_size = [1] if self.single_pathway else [1, 1]
         else:
-            tpool_size = cfg.DATA.NUM_FRAMES // cfg.PGT.STEP_LEN
+            tpool_size = cfg.PGT.TPOOL_SIZE
 
-        pg_pool = nn.AdaptiveAvgPool3d((tpool_size, 1, 1))
+        # TODO: slowfast eval behavior
         if cfg.MODEL.FINAL_POOL[1] == "avg":
-            t_pool = nn.AdaptiveAvgPool3d((tpool_size, None, None))
+            t_pool = [
+                nn.AdaptiveAvgPool3d((t, None, None))
+                for t in tpool_size
+            ]
         elif cfg.MODEL.FINAL_POOL[1] == "max":
-            t_pool = nn.AdaptiveMaxPool3d((tpool_size, None, None))
+            t_pool = [
+                nn.AdaptiveMaxPool3d((t, None, None))
+                for t in tpool_size
+            ]
         ms = self.model.module if cfg.NUM_GPUS > 1 else self.model
         if hasattr(ms, "head"):
-            ms.head.s0_tpool = t_pool
+            ms.head.s0_tpool = t_pool[0]
+            if not self.single_pathway:
+                ms.head.s1_tpool = t_pool[1]
         else:  # regnet
-            ms.avgpool = pg_pool
+            ms.avgpool = nn.AdaptiveAvgPool3d((tpool_size[0], 1, 1))
 
     def step_train(self, inputs, labels, bboxes=None):
         losses = []
@@ -82,12 +94,20 @@ class ProgressTrainer(object):
 
         for step in range(self.steps):
             if step == 0:
-                start_idx = 0
+                start_idx = [0, 0]
                 end_idx = self.num_frames
             else:
-                start_idx = step * self.num_frames - (step - 1) * self.overlap
-                end_idx = start_idx + self.num_frames - self.overlap
-            pg_input = [inputs[0][:, :, start_idx:end_idx]]
+                start_idx, end_idx = [], []
+                for nf, ov in zip(self.num_frames, self.overlap):
+                    start_idx.append(step * nf - (step - 1) * ov)
+                    end_idx.append(start_idx[-1] + nf - ov)
+            if self.single_pathway:
+                pg_input = [inputs[0][:, :, start_idx[0]:end_idx[0]]]
+            else:
+                pg_input = [
+                    inputs[0][:, :, start_idx[0]:end_idx[0]],
+                    inputs[1][:, :, start_idx[1]:end_idx[1]]
+                ]
 
             # Forward
             if bboxes != None:
@@ -171,6 +191,7 @@ class ProgressTrainer(object):
         if self.tblogger:
             lr = self.optimizer.param_groups[0]["lr"]
             self.tblogger.add_scalar("mgrid/lr", lr, global_step)
+
 
 class ProgressNL(nn.Module):
     def __init__(

@@ -69,8 +69,8 @@ if __name__ == "__main__":
     pip_install_directory(PIP_LOCAL_PATH)
     print("Install pip packages finished!")
 
-    compile_custom()
-    print("Compile custom CUDA layers finished!")
+    # compile_custom()
+    # print("Compile custom CUDA layers finished!")
 
     sys.path.append('progress-action/')
     from run_net import main

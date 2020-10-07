@@ -264,7 +264,7 @@ class ResBlock(nn.Module):
         bn_mmt=0.1,
         dilation=1,
         norm_module=nn.BatchNorm3d,
-        temp_progress=False
+        pgt_pathway=None
     ):
         """
         ResBlock class constructs redisual blocks. More details can be found in:
@@ -311,10 +311,10 @@ class ResBlock(nn.Module):
             dilation,
             norm_module,
         )
-        self.temp_progress = temp_progress
+        self.pgt_pathway = pgt_pathway
         self.cache = None
-        if self.temp_progress:
-            self.nframes = _C.PGT.STEP_LEN
+        if pgt_pathway != None:
+            self.nframes = _C.PGT.STEP_LEN[pgt_pathway]
 
     def _construct(
         self,
@@ -359,12 +359,12 @@ class ResBlock(nn.Module):
         self.relu = nn.ReLU(self._inplace_relu)
 
     def update_nframes(self, nframes):
-        assert self.temp_progress
-        self.nframes = nframes
+        assert self.temp_type != None
+        self.nframes = nframes[temp_type]
 
     def forward(self, x):
         # Progress padding
-        if self.temp_progress:
+        if self.pgt_pathway != None:
             # FIXME: it's possible the intermediate feature map's T has been
             # pooled. Current implmentation only supports slow and slowfast.
             if x.size(2) < self.nframes: # pg step
@@ -384,7 +384,7 @@ class ResBlock(nn.Module):
         # Remove progress padding and update cache
         # TODO: not decaying cache, only store last cache
         # this will improve ~0.1 mAP on Charades
-        if self.temp_progress:
+        if self.pgt_pathway != None:
             if isinstance(self.cache, torch.Tensor):
                 x = x[:, :, 1:, ...]
                 momentum = _C.PGT.CACHE_MOMENTUM
@@ -560,7 +560,7 @@ class ResStage(nn.Module):
                     inplace_relu=inplace_relu,
                     dilation=dilation[pathway],
                     norm_module=norm_module,
-                    temp_progress=temp_progress,
+                    pgt_pathway=pathway if temp_progress else None,
                 )
                 self.add_module("pathway{}_res{}".format(pathway, i), res_block)
                 if i in nonlocal_inds[pathway]:

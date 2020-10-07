@@ -111,7 +111,10 @@ class Kinetics(torch.utils.data.Dataset):
         )
 
         if self.cfg.PGT.ENABLE:
-            self.step_len = self.cfg.PGT.STEP_LEN
+            if self.cfg.MODEL.ARCH in self.cfg.MODEL.SINGLE_PATHWAY_ARCH:
+                self.step_len = self.cfg.PGT.STEP_LEN[0]
+            else:
+                self.step_len = self.cfg.PGT.STEP_LEN[1]
             self.steps = self.cfg.PGT.STEPS
             # 5 x 8 - (5 - 1) = 40 - 4 = 36
             self.num_frames = self.steps * self.step_len - (self.steps - 1)
@@ -123,6 +126,7 @@ class Kinetics(torch.utils.data.Dataset):
         )
 
     def update_mgrid(self, epoch):
+        # TODO: support multi-pathway
         n_schedule = len(self.cfg.PGT.MGRID_STEPS)
         if n_schedule > 0:    
             cur_idx = epoch % n_schedule
