@@ -203,32 +203,16 @@ _C.NONLOCAL.PROGRESS = False
 # -----------------------------------------------------------------------------
 _C.PGT = CfgNode()
 
-# Whether to use progress training.
-_C.PGT.ENABLE = False
-
-# Length of each progress step.
-_C.PGT.STEP_LEN = 8
-
-# Number of progress steps.
-_C.PGT.STEPS = 5
-
-# Number of overlap (propogated) frame.
-_C.PGT.OVERLAP = 1
-
-# Backward after all steps finished.
-_C.PGT.TRAIN_TOGETHER = False
-
-# Progress cache type. Could be "last", "max", "avg"
-_C.PGT.CACHE = "last"
-
-# Progress cache momentum.
-_C.PGT.CACHE_MOMENTUM = 0.0
-
-# Progress evaluation.
-_C.PGT.PG_EVAL = False
-
-# Ensemble method for progress evaluation.
-_C.PGT.ENSEMBLE_METHOD = "sum"
+_C.PGT.ENABLE = False    # Whether to use progress training.
+_C.PGT.STEP_LEN = [8]    # Length of each progress step.
+_C.PGT.STEPS = 5         # Number of progress steps.
+_C.PGT.OVERLAP = [1]     # Number of overlap (propogated) frame.
+_C.PGT.TRAIN_TOGETHER = False  # Backward after all steps finished.
+_C.PGT.CACHE = "last"    # Progress cache type. Could be "last", "max", "avg"
+_C.PGT.CACHE_MOMENTUM = 0.0  # Progress cache momentum.
+_C.PGT.PG_EVAL = False   # Progress evaluation.
+_C.PGT.ENSEMBLE_METHOD = "sum"  # Ensemble method for progress evaluation.
+_C.PGT.TPOOL_SIZE = [4]  # Final temp pooling size for progress
 
 # Norm type for progress NL. Could be "none", "batchnorm", "layernorm"
 _C.PGT.NL_NORM = "batchnorm"
@@ -238,18 +222,10 @@ _C.PGT.TRUNCATE_GRAD = False
 
 # Multi-grid scheduler, which dynamically changes progress steps and lr.
 _C.PGT.MGRID = False
-
-# Learning rate scale different #steps. Only used when MGRID is True
-_C.PGT.MGRID_LRSCALES = []
-
-# Number of progress step len. Only used when MGRID is True.
-_C.PGT.MGRID_STEP_LEN = []
-
-# Number of progress steps. Only used when MGRID is True.
-_C.PGT.MGRID_STEPS = []
-
-# Finetune at last epoch or not. Only used when MGRID is True.
-_C.PGT.MGRID_NO_FINETUNE = False
+_C.PGT.MGRID_LRSCALES = []  # Learning rate scale different #steps.
+_C.PGT.MGRID_STEP_LEN = []  # Number of progress step len.
+_C.PGT.MGRID_STEPS = []     # Number of progress steps.
+_C.PGT.MGRID_NO_FINETUNE = False  # Finetune at last epoch or not.
 
 # -----------------------------------------------------------------------------
 # Model options
@@ -747,10 +723,20 @@ def _assert_and_infer_cfg(cfg):
 
     # Progress assertions.
     if cfg.PGT.ENABLE:
-        # (8 - 1) x (5 - 1) + 8 = 36
-        assert (cfg.PGT.STEP_LEN - cfg.PGT.OVERLAP) * \
-            (cfg.PGT.STEPS - 1) + \
-            cfg.PGT.STEP_LEN == cfg.DATA.NUM_FRAMES
+        if cfg.MODEL.ARCH in cfg.MODEL.SINGLE_PATHWAY_ARCH:
+            # (8 - 1) x (5 - 1) + 8 = 36
+            assert (cfg.PGT.STEP_LEN[0] - cfg.PGT.OVERLAP[0]) * \
+                (cfg.PGT.STEPS[0] - 1) + \
+                cfg.PGT.STEP_LEN[0] == cfg.DATA.NUM_FRAMES
+        else:
+            # (32 - 1) x (5 - 1) + 32 = 156
+            assert (cfg.PGT.STEP_LEN[1] - cfg.PGT.OVERLAP[1]) * \
+                (cfg.PGT.STEPS - 1) + \
+                cfg.PGT.STEP_LEN[1] == cfg.DATA.NUM_FRAMES
+            # (8 - 1) x (5 - 1) + 8 = 36
+            assert (cfg.PGT.STEP_LEN[0] - cfg.PGT.OVERLAP[0]) * \
+                (cfg.PGT.STEPS - 1) + \
+                cfg.PGT.STEP_LEN[0] == cfg.DATA.NUM_FRAMES // cfg.SLOWFAST.ALPHA
 
         if cfg.PGT.MGRID:
             assert len(cfg.PGT.MGRID_LRS) == len(cfg.PGT.MGRID_STEPS)

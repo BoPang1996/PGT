@@ -88,14 +88,30 @@ def pack_pathway_output(cfg, frames):
         frame_list = [frames]
     elif cfg.MODEL.ARCH in cfg.MODEL.MULTI_PATHWAY_ARCH:
         fast_pathway = frames
+        alpha = cfg.SLOWFAST.ALPHA
+        nframes = frames.shape[1]
         # Perform temporal sampling from the fast pathway.
-        slow_pathway = torch.index_select(
-            frames,
-            1,
-            torch.linspace(
-                0, frames.shape[1] - 1, frames.shape[1] // cfg.SLOWFAST.ALPHA
-            ).long(),
-        )
+        if cfg.PGT.ENABLE:
+            # When PGT enable, select as normal slowfast for 1st clip,
+            # and skip first step in consecutive clips.
+            steps = cfg.PGT.STEPS
+            step_len = cfg.PGT.STEP_LEN
+            idxs = []
+            for i in range(steps):
+                if i == 0:
+                    idx = torch.linspace(
+                        0, step_len[1] - 1, step_len[1] // alpha).long()
+                else:
+                    idx = torch.linspace(
+                        step_len[1] + (step_len[1] - 1) * (i - 1) + step_len[0],
+                        step_len[1] + (step_len[1] - 1) * i - 1,
+                        step_len[1] // alpha - 1,
+                    ).long()
+                idxs.append(idx)
+            idxs = torch.cat(idxs)
+        else:
+            idxs = torch.linspace(0, nframes - 1, nframes // alpha).long()
+        slow_pathway = torch.index_select(frames, 1, idxs)
         frame_list = [slow_pathway, fast_pathway]
     else:
         raise NotImplementedError(
