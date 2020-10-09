@@ -2,8 +2,9 @@ TRAIN:
   ENABLE: True
   DATASET: charades
   BATCH_SIZE: 16
-  EVAL_PERIOD: 6
-  CHECKPOINT_PERIOD: 6
+  EVAL_PERIOD: 1
+  FULL_TIME_EVAL: True
+  CHECKPOINT_PERIOD: 1
   AUTO_RESUME: True
   CHECKPOINT_TYPE: caffe2
   CHECKPOINT_FILE_PATH: data/models/k400/SLOWFAST_8x8_R50.pkl
@@ -11,7 +12,7 @@ TRAIN:
 DATA:
   NUM_FRAMES: 64
   SAMPLING_RATE: 2
-  TRAIN_JITTER_SCALES: [256, 340]
+  TRAIN_JITTER_SCALES: [256, 320]
   TRAIN_CROP_SIZE: 224
   TEST_CROP_SIZE: 256
   INPUT_CHANNEL_NUM: [3, 3]
@@ -19,8 +20,8 @@ DATA:
   INV_UNIFORM_SAMPLE: True
   ENSEMBLE_METHOD: max
   REVERSE_INPUT_CHANNEL: True
-  PATH_TO_DATA_DIR: data/charades/
-  PATH_PREFIX: data/charades/Charades_v1_rgb
+  PATH_TO_DATA_DIR: /home/pg/data/Charades/
+  PATH_PREFIX: /home/pg/data/Charades/Charades_v1_rgb
 
 SLOWFAST:
   ALPHA: 4
@@ -41,14 +42,10 @@ RESNET:
 
 NONLOCAL:
   LOCATION: [[[], []], [[], []], [[], []], [[], []]]
-  GROUP: [[1, 1], [1, 1], [1, 1], [1, 1]]
-  INSTANTIATION: dot_product
 
 BN:
-  USE_PRECISE_STATS: True
-  NUM_BATCHES_PRECISE: 200
-  NORM_TYPE: sync_batchnorm
-  NUM_SYNC_DEVICES: 4
+  USE_PRECISE_STATS: False
+  NORM_TYPE: frozen_batchnorm
 
 SOLVER:
   BASE_LR: 0.0375
@@ -68,6 +65,7 @@ MODEL:
   LOSS_FUNC: bce_logit
   HEAD_ACT: sigmoid
   DROPOUT_RATE: 0.5
+  FINAL_POOL: ["avg", "max"]
 
 TEST:
   ENABLE: True
