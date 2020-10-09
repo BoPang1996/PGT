@@ -62,6 +62,9 @@ _C.TRAIN.AUTO_RESUME = True
 # Path to the checkpoint to load the initial weight.
 _C.TRAIN.CHECKPOINT_FILE_PATH = ""
 
+# Epoch number of checkpoint file. Will be overrided with filepath.
+_C.TRAIN.CHECKPOINT_FILE_EPOCH = -1
+
 # Checkpoint types include `caffe2` or `pytorch`.
 _C.TRAIN.CHECKPOINT_TYPE = "pytorch"
 
@@ -94,6 +97,9 @@ _C.TEST.BATCH_SIZE = 8
 
 # Path to the checkpoint to load the initial weight.
 _C.TEST.CHECKPOINT_FILE_PATH = ""
+
+# Epoch number of checkpoint file. Will be overrided with filepath.
+_C.TEST.CHECKPOINT_FILE_EPOCH = -1
 
 # Number of clips to sample from a video uniformly for aggregating the
 # prediction results.

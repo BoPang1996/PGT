@@ -434,6 +434,18 @@ def load_test_checkpoint(cfg, model):
             inflation=False,
             convert_from_caffe2=cfg.TEST.CHECKPOINT_TYPE == "caffe2",
         )
+    elif cfg.TEST.CHECKPOINT_FILE_EPOCH != -1:
+        filepath = os.path.join(
+            cfg.LOGS.DIR, "checkpoints/checkpoint_epoch_{:05d}.pyth".format(cfg.TEST.CHECKPOINT_FILE_EPOCH))
+        logger.info("Load from given checkpoint: {}.".format(filepath))
+        load_checkpoint(
+            filepath,
+            model,
+            cfg.NUM_GPUS > 1,
+            None,
+            inflation=False,
+            convert_from_caffe2=cfg.TEST.CHECKPOINT_TYPE == "caffe2",
+        )
     elif has_checkpoint(cfg.LOGS.DIR):
         last_checkpoint = get_last_checkpoint(cfg.LOGS.DIR)
         logger.info("Load from last checkpoint, {}.".format(last_checkpoint))
@@ -475,6 +487,20 @@ def load_train_checkpoint(cfg, model, optimizer):
             cfg.TRAIN.CHECKPOINT_FILE_PATH))
         checkpoint_epoch = load_checkpoint(
             cfg.TRAIN.CHECKPOINT_FILE_PATH,
+            model,
+            cfg.NUM_GPUS > 1,
+            optimizer,
+            inflation=cfg.TRAIN.CHECKPOINT_INFLATE,
+            convert_from_caffe2=cfg.TRAIN.CHECKPOINT_TYPE == "caffe2",
+            transfer_weight=cfg.TRAIN.TRANSFER_WEIGHT,
+        )
+        start_epoch = checkpoint_epoch + 1
+    elif cfg.TRAIN.CHECKPOINT_FILE_EPOCH != -1:
+        filepath = os.path.join(
+            cfg.LOGS.DIR, "checkpoints/checkpoint_epoch_{:05d}.pyth".format(cfg.TRAIN.CHECKPOINT_FILE_EPOCH))
+        logger.info("Load from given checkpoint: {}.".format(filepath))
+        checkpoint_epoch = load_checkpoint(
+            filepath,
             model,
             cfg.NUM_GPUS > 1,
             optimizer,

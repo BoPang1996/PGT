@@ -94,6 +94,8 @@ class Kinetics(torch.utils.data.Dataset):
                     len(path_label.split(self.cfg.DATA.PATH_LABEL_SEPARATOR))
                     == 2
                 )
+                if self.cfg.DEBUG and clip_idx > 1000:
+                    break
                 path, label = path_label.split(
                     self.cfg.DATA.PATH_LABEL_SEPARATOR
                 )

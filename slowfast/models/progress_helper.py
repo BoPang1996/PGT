@@ -168,6 +168,9 @@ class ProgressTrainer(object):
                 scale = self.mgrid_lr_scales[cur_idx]
                 for param_group in self.optimizer.param_groups:
                     param_group["lr"] = lr * scale
+        else:
+            for param_group in self.optimizer.param_groups:
+                param_group["lr"] = lr
         if self.tblogger:
             lr = self.optimizer.param_groups[0]["lr"]
             self.tblogger.add_scalar("mgrid/lr", lr, global_step)
