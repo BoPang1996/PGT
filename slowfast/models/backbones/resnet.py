@@ -76,6 +76,7 @@ class ResNet(nn.Module):
         )
 
         self.s2 = resnet_helper.ResStage(
+            cfg=cfg,
             dim_in=[width_per_group],
             dim_out=[width_per_group * 4],
             dim_inner=[dim_inner],
@@ -107,6 +108,7 @@ class ResNet(nn.Module):
             self.add_module("pathway{}_pool".format(pathway), pool)
 
         self.s3 = resnet_helper.ResStage(
+            cfg=cfg,
             dim_in=[width_per_group * 4],
             dim_out=[width_per_group * 8],
             dim_inner=[dim_inner * 2],
@@ -130,6 +132,7 @@ class ResNet(nn.Module):
         )
 
         self.s4 = resnet_helper.ResStage(
+            cfg=cfg,
             dim_in=[width_per_group * 8],
             dim_out=[width_per_group * 16],
             dim_inner=[dim_inner * 4],
@@ -153,6 +156,7 @@ class ResNet(nn.Module):
         )
 
         self.s5 = resnet_helper.ResStage(
+            cfg=cfg,
             dim_in=[width_per_group * 16],
             dim_out=[width_per_group * 32],
             dim_inner=[dim_inner * 8],

@@ -7,7 +7,7 @@ TRAIN:
   CHECKPOINT_PERIOD: 1
   AUTO_RESUME: True
   CHECKPOINT_TYPE: caffe2
-  CHECKPOINT_FILE_PATH: data/models/k400/SLOWFAST_8x8_R50.pkl
+  CHECKPOINT_FILE_PATH: /home/pg/data/models/k400/SLOWFAST_8x8_R50.pkl
 
 DATA:
   NUM_FRAMES: 64
@@ -42,6 +42,7 @@ RESNET:
 
 NONLOCAL:
   LOCATION: [[[], []], [[], []], [[], []], [[], []]]
+  GROUP: [[1, 1], [1, 1], [1, 1], [1, 1]]
 
 BN:
   USE_PRECISE_STATS: False

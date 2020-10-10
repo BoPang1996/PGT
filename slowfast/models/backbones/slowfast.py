@@ -5,7 +5,6 @@ from functools import partial
 
 import slowfast.utils.weight_init_helper as init_helper
 from slowfast.models.batchnorm_helper import get_norm
-from slowfast.config.defaults import _C
 
 from .. import head_helper, resnet_helper, stem_helper, nonlocal_helper
 from ..build import MODEL_REGISTRY
@@ -21,6 +20,7 @@ class FuseFastToSlow(nn.Module):
 
     def __init__(
         self,
+        cfg,
         dim_in,
         fusion_conv_channel_ratio,
         fusion_kernel,
@@ -47,6 +47,7 @@ class FuseFastToSlow(nn.Module):
                 default is nn.BatchNorm3d.
         """
         super(FuseFastToSlow, self).__init__()
+        self.cfg = cfg
         self.conv_f2s = nn.Conv3d(
             dim_in,
             dim_in * fusion_conv_channel_ratio,
@@ -69,7 +70,7 @@ class FuseFastToSlow(nn.Module):
         fuse = self.bn(fuse)
         fuse = self.relu(fuse)
         if fuse.size(2) > x_s.size(2):
-            assert _C.PGT.ENABLE
+            assert self.cfg.PGT.ENABLE
             fuse = fuse[:, :, 1:, ...]
         x_s_fuse = torch.cat([x_s, fuse], 1)
         return [x_s_fuse, x_f]
@@ -140,6 +141,7 @@ class SlowFast(nn.Module):
             norm_module=self.norm_module,
         )
         self.s1_fuse = FuseFastToSlow(
+            cfg,
             width_per_group // cfg.SLOWFAST.BETA_INV,
             cfg.SLOWFAST.FUSION_CONV_CHANNEL_RATIO,
             cfg.SLOWFAST.FUSION_KERNEL_SZ,
@@ -148,6 +150,7 @@ class SlowFast(nn.Module):
         )
 
         self.s2 = resnet_helper.ResStage(
+            cfg=cfg,
             dim_in=[
                 width_per_group + width_per_group // out_dim_ratio,
                 width_per_group // cfg.SLOWFAST.BETA_INV,
@@ -174,6 +177,7 @@ class SlowFast(nn.Module):
             temp_progress=cfg.PGT.ENABLE,
         )
         self.s2_fuse = FuseFastToSlow(
+            cfg,
             width_per_group * 4 // cfg.SLOWFAST.BETA_INV,
             cfg.SLOWFAST.FUSION_CONV_CHANNEL_RATIO,
             cfg.SLOWFAST.FUSION_KERNEL_SZ,
@@ -190,6 +194,7 @@ class SlowFast(nn.Module):
             self.add_module("pathway{}_pool".format(pathway), pool)
 
         self.s3 = resnet_helper.ResStage(
+            cfg=cfg,
             dim_in=[
                 width_per_group * 4 + width_per_group * 4 // out_dim_ratio,
                 width_per_group * 4 // cfg.SLOWFAST.BETA_INV,
@@ -215,7 +220,8 @@ class SlowFast(nn.Module):
             norm_module=self.norm_module,
             temp_progress=cfg.PGT.ENABLE,
         )
-        self.s3_fuse = FuseFastToSlow(
+        self.s3_fuse = FuseFastToSlow(\
+            cfg,
             width_per_group * 8 // cfg.SLOWFAST.BETA_INV,
             cfg.SLOWFAST.FUSION_CONV_CHANNEL_RATIO,
             cfg.SLOWFAST.FUSION_KERNEL_SZ,
@@ -224,6 +230,7 @@ class SlowFast(nn.Module):
         )
 
         self.s4 = resnet_helper.ResStage(
+            cfg=cfg,
             dim_in=[
                 width_per_group * 8 + width_per_group * 8 // out_dim_ratio,
                 width_per_group * 8 // cfg.SLOWFAST.BETA_INV,
@@ -250,6 +257,7 @@ class SlowFast(nn.Module):
             temp_progress=cfg.PGT.ENABLE,
         )
         self.s4_fuse = FuseFastToSlow(
+            cfg,
             width_per_group * 16 // cfg.SLOWFAST.BETA_INV,
             cfg.SLOWFAST.FUSION_CONV_CHANNEL_RATIO,
             cfg.SLOWFAST.FUSION_KERNEL_SZ,
@@ -258,6 +266,7 @@ class SlowFast(nn.Module):
         )
 
         self.s5 = resnet_helper.ResStage(
+            cfg=cfg,
             dim_in=[
                 width_per_group * 16 + width_per_group * 16 // out_dim_ratio,
                 width_per_group * 16 // cfg.SLOWFAST.BETA_INV,

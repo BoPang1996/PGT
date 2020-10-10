@@ -7,7 +7,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from slowfast.config.defaults import _C
 from slowfast.models.nonlocal_helper import Nonlocal
 from slowfast.models.progress_helper import ProgressNL
 
@@ -251,6 +250,7 @@ class ResBlock(nn.Module):
 
     def __init__(
         self,
+        cfg,
         dim_in,
         dim_out,
         temp_kernel_size,
@@ -295,6 +295,7 @@ class ResBlock(nn.Module):
                 default is nn.BatchNorm3d.
         """
         super(ResBlock, self).__init__()
+        self.cfg = cfg
         self._inplace_relu = inplace_relu
         self._eps = eps
         self._bn_mmt = bn_mmt
@@ -314,7 +315,7 @@ class ResBlock(nn.Module):
         self.pgt_pathway = pgt_pathway
         self.cache = None
         if pgt_pathway != None:
-            self.nframes = _C.PGT.STEP_LEN[pgt_pathway]
+            self.nframes = cfg.PGT.STEP_LEN[pgt_pathway]
 
     def _construct(
         self,
@@ -371,11 +372,11 @@ class ResBlock(nn.Module):
                 x = torch.cat([self.cache, x], dim=2)
             else: # reset cache
                 self.cache = None
-            if _C.PGT.CACHE == "last":
+            if self.cfg.PGT.CACHE == "last":
                 cache = x[:, :, -1, ...].unsqueeze(2)
-            elif _C.PGT.CACHE == "max":
+            elif self.cfg.PGT.CACHE == "max":
                 cache = F.max_pool3d(x, (x.size(2), 1, 1), 1)
-            elif _C.PGT.CACHE == "avg":
+            elif self.cfg.PGT.CACHE == "avg":
                 cache = F.avg_pool3d(x, (x.size(2), 1, 1), 1)
         if hasattr(self, "branch1"):
             x = self.branch1_bn(self.branch1(x)) + self.branch2(x)
@@ -387,9 +388,9 @@ class ResBlock(nn.Module):
         if self.pgt_pathway != None:
             if isinstance(self.cache, torch.Tensor):
                 x = x[:, :, 1:, ...]
-                momentum = _C.PGT.CACHE_MOMENTUM
+                momentum = self.cfg.PGT.CACHE_MOMENTUM
                 cache = (1 - momentum) * cache + momentum * self.cache
-            self.cache = cache if _C.PGT.TRUNCATE_GRAD else cache.detach()
+            self.cache = cache if self.cfg.PGT.TRUNCATE_GRAD else cache.detach()
         x = self.relu(x)
         return x
 
@@ -407,6 +408,7 @@ class ResStage(nn.Module):
 
     def __init__(
         self,
+        cfg,
         dim_in,
         dim_out,
         stride,
@@ -474,6 +476,7 @@ class ResStage(nn.Module):
                 default is nn.BatchNorm3d.
         """
         super(ResStage, self).__init__()
+        self.cfg = cfg
         assert all(
             (
                 num_block_temp_kernel[i] <= num_blocks[i]
@@ -549,6 +552,7 @@ class ResStage(nn.Module):
                 trans_func = get_trans_func(trans_func_name)
                 # Construct the block.
                 res_block = ResBlock(
+                    self.cfg,
                     dim_in[pathway] if i == 0 else dim_out[pathway],
                     dim_out[pathway],
                     self.temp_kernel_sizes[pathway][i],
@@ -575,11 +579,12 @@ class ResStage(nn.Module):
                         )
                     else:
                         nln = ProgressNL(
+                            self.cfg,
                             dim_out[pathway],
                             dim_out[pathway] // 2,
                             nonlocal_pool[pathway],
                             instantiation=instantiation,
-                            norm_type=_C.PGT.NL_NORM,
+                            norm_type=self.cfg.PGT.NL_NORM,
                         )
                     self.add_module(
                         "pathway{}_nonlocal{}".format(pathway, i), nln

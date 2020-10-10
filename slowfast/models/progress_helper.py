@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.parallel.distributed as dist
 
-from slowfast.config.defaults import _C
 from slowfast.models import optimizer as optim
 from slowfast.models.batchnorm_helper import FrozenBatchNorm3d
 from slowfast.models.head_helper import ResNetBasicHead, ResNetRoIHead
@@ -199,6 +198,7 @@ class ProgressTrainer(object):
 class ProgressNL(nn.Module):
     def __init__(
         self,
+        cfg,
         dim,
         dim_inner,
         pool_size=None,
@@ -210,6 +210,7 @@ class ProgressNL(nn.Module):
         norm_momentum=0.1,
     ):
         super(ProgressNL, self).__init__()
+        self.cfg = cfg
         self.dim = dim
         self.dim_inner = dim_inner
         self.pool_size = pool_size
@@ -283,7 +284,7 @@ class ProgressNL(nn.Module):
     def forward(self, x):
         # cache
         y = x if self.step == 0 else self.cache
-        if self.step == _C.PGT.STEPS - 1:
+        if self.step == self.cfg.PGT.STEPS - 1:
             self.step = 0
             self.cache = None
         else:
