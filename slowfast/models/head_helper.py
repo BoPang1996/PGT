@@ -5,7 +5,6 @@
 
 import torch
 import torch.nn as nn
-# from .detection_helper import ROIAlign
 
 
 class ResNetRoIHead(nn.Module):
@@ -66,6 +65,7 @@ class ResNetRoIHead(nn.Module):
             len({len(pool_size), len(dim_in)}) == 1
         ), "pathway dimensions are not consistent."
         self.num_pathways = len(pool_size)
+        from .detection_helper import ROIAlign
         for pathway in range(self.num_pathways):
             temporal_pool = nn.AvgPool3d(
                 [pool_size[pathway][0], 1, 1], stride=1

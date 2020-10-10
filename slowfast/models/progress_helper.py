@@ -68,7 +68,6 @@ class ProgressTrainer(object):
         else:
             tpool_size = cfg.PGT.TPOOL_SIZE
 
-        # TODO: slowfast eval behavior
         if cfg.MODEL.FINAL_POOL[1] == "avg":
             t_pool = [
                 nn.AdaptiveAvgPool3d((t, None, None))
@@ -156,13 +155,20 @@ class ProgressTrainer(object):
 
             for step in range(self.steps):
                 if step == 0:
-                    start_idx = 0
+                    start_idx = [0, 0]
                     end_idx = self.num_frames
                 else:
-                    start_idx = step * self.num_frames - \
-                        (step - 1) * self.overlap
-                    end_idx = start_idx + self.num_frames - self.overlap
-                pg_input = [inputs[0][:, :, start_idx:end_idx]]
+                    start_idx, end_idx = [], []
+                    for nf, ov in zip(self.num_frames, self.overlap):
+                        start_idx.append(step * nf - (step - 1) * ov)
+                        end_idx.append(start_idx[-1] + nf - ov)
+                if self.single_pathway:
+                    pg_input = [inputs[0][:, :, start_idx[0]:end_idx[0]]]
+                else:
+                    pg_input = [
+                        inputs[0][:, :, start_idx[0]:end_idx[0]],
+                        inputs[1][:, :, start_idx[1]:end_idx[1]]
+                    ]
 
                 # Forward
                 if bboxes != None:

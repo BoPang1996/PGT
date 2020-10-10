@@ -337,6 +337,10 @@ class Ava(torch.utils.data.Dataset):
 
         return imgs, boxes
 
+    def update_mgrid(self, epoch):
+        # TODO
+        pass
+
     def __getitem__(self, idx):
         """
         Generate corresponding clips, boxes, labels and metadata for given idx.
