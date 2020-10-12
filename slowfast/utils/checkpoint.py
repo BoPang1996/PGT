@@ -13,7 +13,8 @@ from fvcore.common.file_io import PathManager
 
 import slowfast.utils.distributed as du
 import slowfast.utils.logging as logging
-from slowfast.utils.c2_model_loading import get_name_convert_func
+from slowfast.utils.c2_model_loading import get_name_convert_func as c2_name_convert_func
+from slowfast.utils.aia_model_loading import get_name_convert_func as aia_name_convert_func
 from slowfast.utils.setup_moxing_env import wrap_input_path2
 
 logger = logging.get_logger(__name__)
@@ -185,6 +186,7 @@ def load_checkpoint(
     convert_from_caffe2=False,
     strict_loading=False,
     transfer_weight=True,
+    checkpoint_type="pytorch",
 ):
     """
     Load the checkpoint from the given file. If inflation is True, inflate the
@@ -196,9 +198,10 @@ def load_checkpoint(
         torch.nn.parallel.DistributedDataParallel.
         optimizer (optim): optimizer to load the historical state.
         inflation (bool): if True, inflate the weights from the checkpoint.
-        convert_from_caffe2 (bool): if True, load the model from caffe2 and
-            convert it to pytorch.
+        convert_from_caffe2 (bool, deprecated): if True, load the model 
+            from caffe2 and convert it to pytorch.
         transfer_weight (bool): if True, only load model weight.
+        checkpoint_type (str): could be "pytorch", "caffe2", "aia"
     Returns:
         (int): the number of training epoch of the checkpoint.
     """
@@ -208,11 +211,11 @@ def load_checkpoint(
     ), "Checkpoint '{}' not found".format(path_to_checkpoint)
     # Account for the DDP wrapper in the multi-gpu setting.
     ms = model.module if data_parallel else model
-    if convert_from_caffe2:
+    if checkpoint_type == "caffe2" or convert_from_caffe2:
         with open(path_to_checkpoint, "rb") as f:
             caffe2_checkpoint = pickle.load(f, encoding="latin1")
         state_dict = OrderedDict()
-        name_convert_func = get_name_convert_func()
+        name_convert_func = c2_name_convert_func()
         for key in caffe2_checkpoint["blobs"].keys():
             converted_key = name_convert_func(key)
             converted_key = c2_normal_to_sub_bn(converted_key, ms.state_dict())
@@ -264,6 +267,52 @@ def load_checkpoint(
                     )
         ms.load_state_dict(state_dict, strict=strict_loading)
         epoch = -1
+    elif checkpoint_type == "aia":
+        with open(path_to_checkpoint, "rb") as f:
+            checkpoint = torch.load(f, map_location="cpu")
+        model_state_dict_3d = (
+            model.module.state_dict() if data_parallel else model.state_dict()
+        )
+        state_dict = OrderedDict()
+        name_convert_func = aia_name_convert_func()
+        for key in checkpoint["model"].keys():
+            converted_key = name_convert_func(key)
+            if converted_key in ms.state_dict():
+                ckpt_blob_shape = checkpoint["model"][key].size()
+                model_blob_shape = ms.state_dict()[converted_key].size()
+                if converted_key == "head.projection.weight":
+                    checkpoint["model"][key] = checkpoint["model"][key].squeeze()
+                    ckpt_blob_shape = checkpoint["model"][key].size()
+                if ckpt_blob_shape == model_blob_shape:
+                    state_dict[converted_key] = checkpoint["model"][key]
+                    logger.info(
+                        "{}: {} => {}: {}".format(
+                            key,
+                            ckpt_blob_shape,
+                            converted_key,
+                            model_blob_shape,
+                        )
+                    )
+                else:
+                    logger.warn(
+                        "!! {}: {} does not match {}: {}".format(
+                            key,
+                            ckpt_blob_shape,
+                            converted_key,
+                            model_blob_shape,
+                        )
+                    )
+            else:
+                if not any(
+                    prefix in key for prefix in ["num_batches_tracked"]
+                ):
+                    logger.warn(
+                        "!! {}: can not be converted, got {}".format(
+                            key, converted_key
+                        )
+                    )
+        ms.load_state_dict(state_dict, strict=strict_loading)
+        epoch = -1
     else:
         # Load the checkpoint on CPU to avoid GPU mem spike.
         with open(path_to_checkpoint, "rb") as f:
@@ -286,7 +335,7 @@ def load_checkpoint(
                 if key in ms.state_dict():
                     ckpt_blob_shape = checkpoint["model_state"][key].shape
                     model_blob_shape = ms.state_dict()[key].shape
-                    if ckpt_blob_shape == tuple(model_blob_shape):
+                    if ckpt_blob_shape == model_blob_shape:
                         state_dict[key] = checkpoint["model_state"][key]
                         # logger.info(
                         #     "{}: {} => {}: {}".format(
@@ -302,7 +351,7 @@ def load_checkpoint(
                                 key,
                                 ckpt_blob_shape,
                                 key,
-                                tuple(model_blob_shape),
+                                model_blob_shape,
                             )
                         )
             ms.load_state_dict(state_dict, strict=strict_loading)
@@ -423,18 +472,7 @@ def load_test_checkpoint(cfg, model):
     Loading checkpoint logic for testing.
     """
     # Load a checkpoint to test if applicable.
-    if cfg.TEST.CHECKPOINT_FILE_PATH != "":
-        logger.info("Load from given checkpoint: {}.".format(
-            cfg.TEST.CHECKPOINT_FILE_PATH))
-        load_checkpoint(
-            cfg.TEST.CHECKPOINT_FILE_PATH,
-            model,
-            cfg.NUM_GPUS > 1,
-            None,
-            inflation=False,
-            convert_from_caffe2=cfg.TEST.CHECKPOINT_TYPE == "caffe2",
-        )
-    elif cfg.TEST.CHECKPOINT_FILE_EPOCH != -1:
+    if cfg.TEST.CHECKPOINT_FILE_EPOCH != -1:
         filepath = os.path.join(
             cfg.LOGS.DIR, "checkpoints/checkpoint_epoch_{:05d}.pyth".format(cfg.TEST.CHECKPOINT_FILE_EPOCH))
         logger.info("Load from given checkpoint: {}.".format(filepath))
@@ -444,7 +482,18 @@ def load_test_checkpoint(cfg, model):
             cfg.NUM_GPUS > 1,
             None,
             inflation=False,
-            convert_from_caffe2=cfg.TEST.CHECKPOINT_TYPE == "caffe2",
+            convert_from_caffe2=False,
+        )
+    elif cfg.TEST.CHECKPOINT_FILE_PATH != "":
+        logger.info("Load from given checkpoint: {}.".format(
+            cfg.TEST.CHECKPOINT_FILE_PATH))
+        load_checkpoint(
+            cfg.TEST.CHECKPOINT_FILE_PATH,
+            model,
+            cfg.NUM_GPUS > 1,
+            None,
+            inflation=False,
+            checkpoint_type=cfg.TEST.CHECKPOINT_TYPE
         )
     elif has_checkpoint(cfg.LOGS.DIR):
         last_checkpoint = get_last_checkpoint(cfg.LOGS.DIR)
@@ -482,19 +531,6 @@ def load_train_checkpoint(cfg, model, optimizer):
             transfer_weight=False,
         )
         start_epoch = checkpoint_epoch + 1
-    elif cfg.TRAIN.CHECKPOINT_FILE_PATH != "":
-        logger.info("Load from given checkpoint: {}.".format(
-            cfg.TRAIN.CHECKPOINT_FILE_PATH))
-        checkpoint_epoch = load_checkpoint(
-            cfg.TRAIN.CHECKPOINT_FILE_PATH,
-            model,
-            cfg.NUM_GPUS > 1,
-            optimizer,
-            inflation=cfg.TRAIN.CHECKPOINT_INFLATE,
-            convert_from_caffe2=cfg.TRAIN.CHECKPOINT_TYPE == "caffe2",
-            transfer_weight=cfg.TRAIN.TRANSFER_WEIGHT,
-        )
-        start_epoch = checkpoint_epoch + 1
     elif cfg.TRAIN.CHECKPOINT_FILE_EPOCH != -1:
         filepath = os.path.join(
             cfg.LOGS.DIR, "checkpoints/checkpoint_epoch_{:05d}.pyth".format(cfg.TRAIN.CHECKPOINT_FILE_EPOCH))
@@ -505,8 +541,21 @@ def load_train_checkpoint(cfg, model, optimizer):
             cfg.NUM_GPUS > 1,
             optimizer,
             inflation=cfg.TRAIN.CHECKPOINT_INFLATE,
-            convert_from_caffe2=cfg.TRAIN.CHECKPOINT_TYPE == "caffe2",
             transfer_weight=cfg.TRAIN.TRANSFER_WEIGHT,
+            checkpoint_type=cfg.TRAIN.CHECKPOINT_TYPE,
+        )
+        start_epoch = checkpoint_epoch + 1
+    elif cfg.TRAIN.CHECKPOINT_FILE_PATH != "":
+        logger.info("Load from given checkpoint: {}.".format(
+            cfg.TRAIN.CHECKPOINT_FILE_PATH))
+        checkpoint_epoch = load_checkpoint(
+            cfg.TRAIN.CHECKPOINT_FILE_PATH,
+            model,
+            cfg.NUM_GPUS > 1,
+            optimizer,
+            inflation=cfg.TRAIN.CHECKPOINT_INFLATE,
+            transfer_weight=cfg.TRAIN.TRANSFER_WEIGHT,
+            checkpoint_type=cfg.TRAIN.CHECKPOINT_TYPE,
         )
         start_epoch = checkpoint_epoch + 1
     else:

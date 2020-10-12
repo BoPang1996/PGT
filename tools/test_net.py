@@ -149,8 +149,10 @@ def test(cfg):
 
     # Build the video model and print model statistics.
     model = build_model(cfg)
-    if du.is_master_proc() and cfg.LOGS.LOG_MODEL:
-        misc.log_model_info(model, cfg, use_train_input=False)
+    if du.is_master_proc():
+        logger.info(str(model))
+        if cfg.LOGS.LOG_MODEL:
+            misc.log_model_info(model, cfg, use_train_input=False)
 
     cu.load_test_checkpoint(cfg, model)
 

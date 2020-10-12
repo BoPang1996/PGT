@@ -402,8 +402,7 @@ def train(cfg):
     # Build the video model and print model statistics.
     model = build_model(cfg)
     if du.is_master_proc():
-        if cfg.DEBUG:
-            logger.info(str(model))
+        logger.info(str(model))
         if cfg.LOGS.LOG_MODEL:
             misc.log_model_info(model, cfg, use_train_input=True)
 

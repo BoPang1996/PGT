@@ -1,0 +1,26 @@
+_BASE_: SLOWFAST_8x8_R101.yaml
+
+TRAIN:
+  BATCH_SIZE: 128
+
+DATA:
+  PATH_TO_DATA_DIR: obs://bucket-5006/data/Kinetics_600_scaled/
+  PATH_PREFIX: obs://bucket-5006/data/Kinetics_600_scaled/
+
+SOLVER:
+  BASE_LR: 0.4
+  WARMUP_START_LR: 0.04
+
+TEST:
+  BATCH_SIZE: 128
+  # CHECKPOINT_FILE_PATH: obs://bucket-5006/data/slowfast/models/k600/SLOWFAST_8x8_R101.pth
+  # CHECKPOINT_TYPE: aia
+
+DATA_LOADER:
+  NUM_WORKERS: 7
+  PIN_MEMORY: False
+
+LOGS:
+  DIR: obs://bucket-5006/penggao/logs/progress-action/Kinetics_600/MOX_SLOWFAST_8x8_R101
+
+NUM_SHARDS: 2

@@ -37,6 +37,7 @@ class VideoModelStem(nn.Module):
         eps=1e-5,
         bn_mmt=0.1,
         norm_module=nn.BatchNorm3d,
+        pool_pad=True,
     ):
         """
         The `__init__` method of any subclass should also contain these
@@ -87,9 +88,9 @@ class VideoModelStem(nn.Module):
         self.eps = eps
         self.bn_mmt = bn_mmt
         # Construct the stem layer.
-        self._construct_stem(dim_in, dim_out, stem_func_name, norm_module)
+        self._construct_stem(dim_in, dim_out, stem_func_name, norm_module, pool_pad)
 
-    def _construct_stem(self, dim_in, dim_out, stem_func_name, norm_module):
+    def _construct_stem(self, dim_in, dim_out, stem_func_name, norm_module, pool_pad):
         stem_func = get_stem_func(stem_func_name)
         for pathway in range(len(dim_in)):
             stem = stem_func(
@@ -102,6 +103,8 @@ class VideoModelStem(nn.Module):
                 self.eps,
                 self.bn_mmt,
                 norm_module,
+                is_pool=True,
+                pool_pad=pool_pad,
             )
             self.add_module("pathway{}_stem".format(pathway), stem)
 
@@ -134,6 +137,7 @@ class ResNetBasicStem(nn.Module):
         bn_mmt=0.1,
         norm_module=nn.BatchNorm3d,
         is_pool=True,
+        pool_pad=True,
     ):
         """
         The `__init__` method of any subclass should also contain these arguments.
@@ -159,7 +163,8 @@ class ResNetBasicStem(nn.Module):
                 PyTorch = 1 - BN momentum in Caffe2.
             norm_module (nn.Module): nn.Module for the normalization layer. The
                 default is nn.BatchNorm3d.
-            is_pool (bool): pooling or not
+            is_pool (bool): pooling or not.
+            pool_pad (bool): padding in pooling or not.
         """
         super(ResNetBasicStem, self).__init__()
         self.kernel = kernel
@@ -169,6 +174,7 @@ class ResNetBasicStem(nn.Module):
         self.eps = eps
         self.bn_mmt = bn_mmt
         self.is_pool = is_pool
+        self.pool_pad = pool_pad
 
         # Construct the stem layer.
         self._construct_stem(dim_in, dim_out, norm_module)
@@ -187,8 +193,9 @@ class ResNetBasicStem(nn.Module):
         )
         self.relu = nn.ReLU(self.inplace_relu)
         if self.is_pool:
+            padding = [0, 1, 1] if self.pool_pad else 0
             self.pool_layer = nn.MaxPool3d(
-                kernel_size=[1, 3, 3], stride=[1, 2, 2], padding=[0, 1, 1]
+                kernel_size=[1, 3, 3], stride=[1, 2, 2], padding=padding
             )
 
     def forward(self, x):

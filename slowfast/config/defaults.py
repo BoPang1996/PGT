@@ -124,6 +124,9 @@ _C.RESNET = CfgNode()
 # Video stem function
 _C.RESNET.STEM_FUNC = "resnet_stem"
 
+# Video stem pool1 padding or not.
+_C.RESNET.STEM_POOL_PAD = True
+
 # Transformation function.
 _C.RESNET.TRANS_FUNC = "bottleneck_transform"
 
@@ -284,6 +287,11 @@ _C.SLOWFAST.FUSION_CONV_CHANNEL_RATIO = 2
 # pathway.
 _C.SLOWFAST.FUSION_KERNEL_SZ = 5
 
+# Use BN in fusion tconv or not.
+_C.SLOWFAST.FUSION_BN = True
+
+# Use ReLU in fusion tconv or not.
+_C.SLOWFAST.FUSION_RELU = True
 
 # -----------------------------------------------------------------------------
 # Data options

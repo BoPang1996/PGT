@@ -54,21 +54,25 @@ class FuseFastToSlow(nn.Module):
             kernel_size=[fusion_kernel, 1, 1],
             stride=[alpha, 1, 1],
             padding=[fusion_kernel // 2, 0, 0],
-            bias=False,
+            bias=not self.cfg.SLOWFAST.FUSION_BN,
         )
-        self.bn = norm_module(
-            num_features=dim_in * fusion_conv_channel_ratio,
-            eps=eps,
-            momentum=bn_mmt,
-        )
-        self.relu = nn.ReLU(inplace_relu)
+        if self.cfg.SLOWFAST.FUSION_BN:
+            self.bn = norm_module(
+                num_features=dim_in * fusion_conv_channel_ratio,
+                eps=eps,
+                momentum=bn_mmt,
+            )
+        if self.cfg.SLOWFAST.FUSION_RELU:
+            self.relu = nn.ReLU(inplace_relu)
 
     def forward(self, x):
         x_s = x[0]
         x_f = x[1]
         fuse = self.conv_f2s(x_f)
-        fuse = self.bn(fuse)
-        fuse = self.relu(fuse)
+        if self.cfg.SLOWFAST.FUSION_BN:
+            fuse = self.bn(fuse)
+        if self.cfg.SLOWFAST.FUSION_RELU:
+            fuse = self.relu(fuse)
         if fuse.size(2) > x_s.size(2):
             assert self.cfg.PGT.ENABLE
             fuse = fuse[:, :, 1:, ...]
@@ -139,6 +143,7 @@ class SlowFast(nn.Module):
             ],
             stem_func_name=cfg.RESNET.STEM_FUNC,
             norm_module=self.norm_module,
+            pool_pad=cfg.RESNET.STEM_POOL_PAD,
         )
         self.s1_fuse = FuseFastToSlow(
             cfg,
@@ -220,7 +225,7 @@ class SlowFast(nn.Module):
             norm_module=self.norm_module,
             temp_progress=cfg.PGT.ENABLE,
         )
-        self.s3_fuse = FuseFastToSlow(\
+        self.s3_fuse = FuseFastToSlow(
             cfg,
             width_per_group * 8 // cfg.SLOWFAST.BETA_INV,
             cfg.SLOWFAST.FUSION_CONV_CHANNEL_RATIO,
