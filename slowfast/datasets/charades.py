@@ -111,10 +111,16 @@ class Charades(torch.utils.data.Dataset):
         )
 
         if self.cfg.PGT.ENABLE:
-            self.step_len = self.cfg.PGT.STEP_LEN
+            if self.cfg.MODEL.ARCH in self.cfg.MODEL.SINGLE_PATHWAY_ARCH:
+                self.step_len = self.cfg.PGT.STEP_LEN[0]
+                self.overlap = self.cfg.PGT.OVERLAP[0]
+            else:
+                self.step_len = self.cfg.PGT.STEP_LEN[1]
+                self.overlap = self.cfg.PGT.OVERLAP[1]
             self.steps = self.cfg.PGT.STEPS
-            # 5 x 8 - (5 - 1) = 40 - 4 = 36
-            self.num_frames = self.steps * self.step_len - (self.steps - 1)
+            # slow: 5 x 16 - (5 - 1) * 1 = 80 - 4 = 76
+            # slowfast: 5 x 64 - (5 - 1) * 4 = 304
+            self.num_frames = self.steps * self.step_len - (self.steps - 1) * self.overlap
 
         logger.info(
             "Charades dataloader constructed (size: {}) from {}".format(
@@ -123,6 +129,7 @@ class Charades(torch.utils.data.Dataset):
         )
 
     def update_mgrid(self, epoch):
+        # TODO: support multi-pathway
         n_schedule = len(self.cfg.PGT.MGRID_STEPS)
         if n_schedule > 0:
             cur_idx = epoch % n_schedule
@@ -228,9 +235,10 @@ class Charades(torch.utils.data.Dataset):
         )
 
         if self.cfg.PGT.ENABLE and self.mode == "train":
+            # FIXME: first clip has more frames
             label = [
-                utils.aggregate_labels(self._labels[index][seq[i]:seq[i+self.step_len-1]+1])
-                for i in range(0, len(seq) - 1, self.step_len - 1)
+                utils.aggregate_labels(self._labels[index][seq[i]:seq[i+self.step_len-self.overlap]+1])
+                for i in range(0, len(seq) - self.overlap, self.step_len - self.overlap)
             ]
             label = torch.as_tensor(
                 [utils.as_binary_vector(l, self.cfg.MODEL.NUM_CLASSES)

@@ -96,6 +96,7 @@ def pack_pathway_output(cfg, frames):
             # and skip first step in consecutive clips.
             steps = cfg.PGT.STEPS
             step_len = cfg.PGT.STEP_LEN
+            overlap = cfg.PGT.OVERLAP
             idxs = []
             for i in range(steps):
                 if i == 0:
@@ -103,8 +104,8 @@ def pack_pathway_output(cfg, frames):
                         0, step_len[1] - 1, step_len[1] // alpha).long()
                 else:
                     idx = torch.linspace(
-                        step_len[1] + (step_len[1] - 1) * (i - 1) + step_len[0],
-                        step_len[1] + (step_len[1] - 1) * i - 1,
+                        step_len[1] + (step_len[1] - overlap[1]) * (i - 1) + step_len[0],
+                        step_len[1] + (step_len[1] - overlap[1]) * i - 1,
                         step_len[1] // alpha - 1,
                     ).long()
                 idxs.append(idx)

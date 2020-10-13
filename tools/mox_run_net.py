@@ -27,6 +27,9 @@ def pip_install(package):
     FNULL = open(os.devnull, 'w')
     subprocess.call([sys.executable, "-m", "pip", "install", package],
                     stdout=FNULL, stderr=subprocess.STDOUT)
+    # output
+    # subprocess.call([sys.executable, "-m", "pip", "install", package],
+    #                 stdout=FNULL, stderr=subprocess.STDOUT)
 
 
 def pip_install_directory(local_dir_path):
@@ -38,6 +41,9 @@ def pip_install_directory(local_dir_path):
 if __name__ == "__main__":
     # compile_custom()
     # print("Compile custom CUDA layers finished!")
+
+    # poli env
+    # subprocess.call(["rm", "-r", "/home/work/anaconda3/lib/python3.6/site-packages/portalocker-1.7.1.dist-info/"])
 
     # TODO: set as config
     PIP_S3_PATH = "obs://bucket-5006/penggao/pip_packages"

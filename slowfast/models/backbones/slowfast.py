@@ -68,6 +68,8 @@ class FuseFastToSlow(nn.Module):
     def forward(self, x):
         x_s = x[0]
         x_f = x[1]
+        # NOTE: conv_f2s has stride=alpha, overlap=1/4 will not
+        # influence the output fuse feat's t size
         fuse = self.conv_f2s(x_f)
         if self.cfg.SLOWFAST.FUSION_BN:
             fuse = self.bn(fuse)
@@ -75,7 +77,7 @@ class FuseFastToSlow(nn.Module):
             fuse = self.relu(fuse)
         if fuse.size(2) > x_s.size(2):
             assert self.cfg.PGT.ENABLE
-            fuse = fuse[:, :, 1:, ...]
+            fuse = fuse[:, :, self.cfg.PGT.OVERLAP[0]:, ...]
         x_s_fuse = torch.cat([x_s, fuse], 1)
         return [x_s_fuse, x_f]
 

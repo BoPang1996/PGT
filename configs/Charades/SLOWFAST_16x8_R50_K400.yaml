@@ -52,8 +52,8 @@ SOLVER:
   BASE_LR: 0.0375
   LR_POLICY: steps_with_relative_lrs
   LRS: [1, 0.1, 0.01, 0.001, 0.0001, 0.00001]
-  STEPS: [0, 41, 49]
-  MAX_EPOCH: 57
+  STEPS: [0, 23, 39]
+  MAX_EPOCH: 40
   MOMENTUM: 0.9
   WEIGHT_DECAY: 1e-4
   WARMUP_EPOCHS: 4.0
