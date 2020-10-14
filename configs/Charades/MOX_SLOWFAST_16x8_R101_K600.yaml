@@ -1,19 +1,12 @@
 _BASE_: SLOWFAST_16x8_R101_K600.yaml
 
 TRAIN:
-  BATCH_SIZE: 32
-  CHECKPOINT_FILE_PATH: obs://bucket-5006/data/slowfast/models/k600/SLOWFAST_16x8_R101.pkl
+  CHECKPOINT_TYPE: aia
+  CHECKPOINT_FILE_PATH: obs://bucket-5006/data/slowfast/models/k600/SLOWFAST_8x8_R101.pth
 
 DATA:
   PATH_TO_DATA_DIR: obs://bucket-5006/data/Charades/
   PATH_PREFIX: obs://bucket-5006/data/Charades/Charades_v1_rgb
-
-SOLVER:
-  BASE_LR: 0.075
-  WARMUP_START_LR: 0.0002
-
-TEST:
-  BATCH_SIZE: 32
 
 DATA_LOADER:
   NUM_WORKERS: 7

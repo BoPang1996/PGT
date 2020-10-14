@@ -44,6 +44,7 @@ if __name__ == "__main__":
 
     # poli env
     # subprocess.call(["rm", "-r", "/home/work/anaconda3/lib/python3.6/site-packages/portalocker-1.7.1.dist-info/"])
+    # subprocess.call(["rm", "-r", "/home/work/anaconda3/lib/python3.6/site-packages/yacs-0.1.8.dist-info/"])
 
     # TODO: set as config
     PIP_S3_PATH = "obs://bucket-5006/penggao/pip_packages"

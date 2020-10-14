@@ -6,8 +6,8 @@ TRAIN:
   FULL_TIME_EVAL: True
   CHECKPOINT_PERIOD: 1
   AUTO_RESUME: True
-  CHECKPOINT_TYPE: caffe2
-  CHECKPOINT_FILE_PATH: /home/pg/data/models/k600/SLOWFAST_16x8_R101.pkl
+  CHECKPOINT_TYPE: aia
+  CHECKPOINT_FILE_PATH: /home/pg/data/models/k600/SLOWFAST_8x8_R101.pth
 
 DATA:
   NUM_FRAMES: 64
@@ -27,18 +27,21 @@ SLOWFAST:
   ALPHA: 4
   BETA_INV: 8
   FUSION_CONV_CHANNEL_RATIO: 2
-  FUSION_KERNEL_SZ: 7
+  FUSION_KERNEL_SZ: 5
+  FUSION_BN: False
+  FUSION_RELU: False
 
 RESNET:
-  SPATIAL_STRIDES: [[1, 1], [2, 2], [2, 2], [2, 2]]
-  SPATIAL_DILATIONS: [[1, 1], [1, 1], [1, 1], [1, 1]]
   ZERO_INIT_FINAL_BN: True
   WIDTH_PER_GROUP: 64
   NUM_GROUPS: 1
   DEPTH: 101
   TRANS_FUNC: bottleneck_transform
   STRIDE_1X1: False
-  NUM_BLOCK_TEMP_KERNEL: [[3, 3], [4, 4], [6, 6], [3, 3]]
+  NUM_BLOCK_TEMP_KERNEL: [[3, 3], [4, 4], [23, 23], [3, 3]]
+  SPATIAL_STRIDES: [[1, 1], [2, 2], [2, 2], [2, 2]]
+  SPATIAL_DILATIONS: [[1, 1], [1, 1], [1, 1], [1, 1]]
+  STEM_POOL_PAD: False
 
 NONLOCAL:
   LOCATION: [[[], []], [[], []], [[], []], [[], []]]
@@ -54,8 +57,8 @@ SOLVER:
   BASE_LR: 0.0375
   LR_POLICY: steps_with_relative_lrs
   LRS: [1, 0.1, 0.01, 0.001]
-  STEPS: [0, 41, 49]
-  MAX_EPOCH: 57
+  STEPS: [0, 23, 39]
+  MAX_EPOCH: 40
   MOMENTUM: 0.9
   WEIGHT_DECAY: 1e-4
   WARMUP_EPOCHS: 4.0
@@ -83,7 +86,7 @@ DATA_LOADER:
   PIN_MEMORY: True
 
 LOGS:
-  DIR: logs/Charades/SLOWFAST_16x8_R50_K400/
+  DIR: logs/Charades/SLOWFAST_16x8_R101_K600/
 
 NUM_GPUS: 8
 NUM_SHARDS: 1
