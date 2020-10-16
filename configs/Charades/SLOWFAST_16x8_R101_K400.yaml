@@ -1,0 +1,90 @@
+TRAIN:
+  ENABLE: True
+  DATASET: charades
+  BATCH_SIZE: 16
+  EVAL_PERIOD: 1
+  FULL_TIME_EVAL: True
+  CHECKPOINT_PERIOD: 1
+  AUTO_RESUME: True
+  CHECKPOINT_TYPE: pytorch
+  CHECKPOINT_FILE_PATH: /home/pg/projects/action/progress-action/logs/Kinetics/MOX2_SLOWFAST_8x8_R101.77.22/checkpoints/checkpoint_epoch_00196.pyth
+
+DATA:
+  NUM_FRAMES: 64
+  SAMPLING_RATE: 2
+  TRAIN_JITTER_SCALES: [256, 320]
+  TRAIN_CROP_SIZE: 224
+  TEST_CROP_SIZE: 256
+  INPUT_CHANNEL_NUM: [3, 3]
+  MULTI_LABEL: True
+  INV_UNIFORM_SAMPLE: True
+  ENSEMBLE_METHOD: max
+  REVERSE_INPUT_CHANNEL: True
+  PATH_TO_DATA_DIR: /home/pg/data/Charades/
+  PATH_PREFIX: /home/pg/data/Charades/Charades_v1_rgb
+
+SLOWFAST:
+  ALPHA: 4
+  BETA_INV: 8
+  FUSION_CONV_CHANNEL_RATIO: 2
+  FUSION_KERNEL_SZ: 5
+
+RESNET:
+  ZERO_INIT_FINAL_BN: True
+  WIDTH_PER_GROUP: 64
+  NUM_GROUPS: 1
+  DEPTH: 101
+  TRANS_FUNC: bottleneck_transform
+  STRIDE_1X1: False
+  NUM_BLOCK_TEMP_KERNEL: [[3, 3], [4, 4], [23, 23], [3, 3]]
+  SPATIAL_STRIDES: [[1, 1], [2, 2], [2, 2], [2, 2]]
+  SPATIAL_DILATIONS: [[1, 1], [1, 1], [1, 1], [1, 1]]
+
+NONLOCAL:
+  LOCATION: [[[], []], [[], []], [[], []], [[], []]]
+  GROUP: [[1, 1], [1, 1], [1, 1], [1, 1]]
+  INSTANTIATION: dot_product
+
+BN:
+  USE_PRECISE_STATS: False
+  WEIGHT_DECAY: 0.0
+  NORM_TYPE: frozen_batchnorm
+
+SOLVER:
+  BASE_LR: 0.0375
+  LR_POLICY: steps_with_relative_lrs
+  LRS: [1, 0.1, 0.01, 0.001]
+  STEPS: [0, 23, 39]
+  MAX_EPOCH: 40
+  MOMENTUM: 0.9
+  WEIGHT_DECAY: 1e-4
+  WARMUP_EPOCHS: 4.0
+  WARMUP_START_LR: 0.0001
+  OPTIMIZING_METHOD: sgd
+
+MODEL:
+  NUM_CLASSES: 157
+  ARCH: slowfast
+  MODEL_NAME: SlowFast
+  LOSS_FUNC: bce_logit
+  HEAD_ACT: sigmoid
+  DROPOUT_RATE: 0.5
+  FINAL_POOL: ["avg", "max"]
+
+TEST:
+  ENABLE: True
+  DATASET: charades
+  BATCH_SIZE: 16
+  NUM_ENSEMBLE_VIEWS: 10
+  NUM_SPATIAL_CROPS: 3
+
+DATA_LOADER:
+  NUM_WORKERS: 8
+  PIN_MEMORY: True
+
+LOGS:
+  DIR: logs/Charades/SLOWFAST_16x8_R101_K400/
+
+NUM_GPUS: 8
+NUM_SHARDS: 1
+RNG_SEED: 0

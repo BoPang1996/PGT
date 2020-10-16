@@ -8,9 +8,9 @@ DATA:
 
 PGT:
   ENABLE: True
-  STEP_LEN: 16
+  STEP_LEN: [16]
   STEPS: 5
-  OVERLAP: 1
+  OVERLAP: [1]
   CACHE: last
   CACHE_MOMENTUM: 0.1
   PG_EVAL: True
