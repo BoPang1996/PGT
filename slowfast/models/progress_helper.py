@@ -6,6 +6,8 @@ import torch.nn.parallel.distributed as dist
 from slowfast.models import optimizer as optim
 from slowfast.models.batchnorm_helper import FrozenBatchNorm3d
 from slowfast.models.head_helper import ResNetBasicHead, ResNetRoIHead
+from slowfast.utils import distributed as du
+from slowfast.utils import logging as logging
 from slowfast.utils import misc as misc
 
 
@@ -30,6 +32,7 @@ class ProgressTrainer(object):
         self.progress_eval = cfg.PGT.PG_EVAL
         self.ensemble_method = cfg.PGT.ENSEMBLE_METHOD
         self.truncate_grad = cfg.PGT.TRUNCATE_GRAD
+        self.logger = logging.get_logger(__name__)
         self.tblogger = tblogger
 
         self.multigrid = cfg.PGT.MGRID
@@ -41,11 +44,9 @@ class ProgressTrainer(object):
 
         self.single_pathway = cfg.MODEL.ARCH in cfg.MODEL.SINGLE_PATHWAY_ARCH
 
-        # TODO: support multi-pathway multigrid
         if self.multigrid and self.model.training:
             # keep last epoch hyper-params align with non-multigrid setting
             # to finetune (in cfg.SOLVER)
-            # FIXME: fit slowfast
             if epoch != cfg.SOLVER.MAX_EPOCH - 1 or self.mgrid_noft:
                 self.n_schedule = len(self.mgrid_steps)
                 cur_idx = epoch % self.n_schedule
@@ -85,6 +86,10 @@ class ProgressTrainer(object):
                 ms.head.s1_tpool = t_pool[1]
         else:  # regnet
             ms.avgpool = nn.AdaptiveAvgPool3d((tpool_size[0], 1, 1))
+
+        # log model for 1st epoch and test
+        if du.is_master_proc() and (epoch == 0 or epoch is None):
+            self.logger.info(str(self.model.head))
 
     def step_train(self, inputs, labels, bboxes=None):
         losses = []

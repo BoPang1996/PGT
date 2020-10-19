@@ -5,9 +5,9 @@ DATA:
 
 PGT:
   ENABLE: True
-  STEP_LEN: 16
+  STEP_LEN: [16]
   STEPS: 5
-  OVERLAP: 1
+  OVERLAP: [1]
   CACHE: last
   CACHE_MOMENTUM: 0.1
   PG_EVAL: True
@@ -16,7 +16,7 @@ PGT:
 
 SOLVER:
   BASE_LR: 0.025
-  STEPS: [0, 10, 16]
+  STEPS: [0, 20]
   MAX_EPOCH: 20
   WARMUP_EPOCHS: 1.0
 

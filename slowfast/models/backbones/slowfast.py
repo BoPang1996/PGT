@@ -69,7 +69,7 @@ class FuseFastToSlow(nn.Module):
         x_s = x[0]
         x_f = x[1]
         # NOTE: conv_f2s has stride=alpha, overlap=1/4 will not
-        # influence the output fuse feat's t size
+        # influence the output fuse feat's t size in training
         fuse = self.conv_f2s(x_f)
         if self.cfg.SLOWFAST.FUSION_BN:
             fuse = self.bn(fuse)
@@ -77,7 +77,13 @@ class FuseFastToSlow(nn.Module):
             fuse = self.relu(fuse)
         if fuse.size(2) > x_s.size(2):
             assert self.cfg.PGT.ENABLE
-            fuse = fuse[:, :, self.cfg.PGT.OVERLAP[0]:, ...]
+            # TODO: when PG_EVAL is False, how to match?
+            # 1. [-36:] --> not working
+            # 2. 8,(1),7,(1),7,7=39
+            if self.training or self.cfg.PGT.PG_EVAL:
+                fuse = fuse[:, :, self.cfg.PGT.OVERLAP[0]:, ...]
+            else:
+                fuse = fuse[:, :, -x_s.size(2):]
         x_s_fuse = torch.cat([x_s, fuse], 1)
         return [x_s_fuse, x_f]
 

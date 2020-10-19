@@ -1,7 +1,0 @@
-_BASE_: SLOW_PROG_36x8_R50.yaml
-
-PGT:
-  TRAIN_TOGETHER: True
-
-LOGS:
-  DIR: logs/Kinetics/SLOW_PROG_36x8_R50_train_together

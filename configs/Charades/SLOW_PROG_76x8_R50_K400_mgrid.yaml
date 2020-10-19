@@ -4,7 +4,7 @@ PGT:
   MGRID: True
   MGRID_LRSCALES: [1, 1, 1, 1]
   MGRID_STEPS: [5, 6, 7, 8]
-  MGRID_STEP_LEN: [16, 14, 12, 10]
+  MGRID_STEP_LEN: [[16], [14], [12], [11]]
 
 SOLVER:
   BASE_LR: 0.025

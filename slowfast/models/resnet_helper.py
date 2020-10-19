@@ -360,8 +360,8 @@ class ResBlock(nn.Module):
         self.relu = nn.ReLU(self._inplace_relu)
 
     def update_nframes(self, nframes):
-        assert self.temp_type != None
-        self.nframes = nframes[temp_type]
+        assert self.pgt_pathway != None
+        self.nframes = nframes[self.pgt_pathway]
 
     def forward(self, x):
         # Progress padding

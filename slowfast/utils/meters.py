@@ -188,7 +188,7 @@ class AVAMeter(object):
         if lr is not None:
             self.lr = lr
 
-    def finalize_metrics(self, log=True):
+    def finalize_metrics(self, log=True, cur_epoch=None):
         """
         Calculate and log the final AVA metrics.
         """

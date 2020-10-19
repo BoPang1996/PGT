@@ -129,13 +129,15 @@ class Charades(torch.utils.data.Dataset):
         )
 
     def update_mgrid(self, epoch):
-        # TODO: support multi-pathway
         n_schedule = len(self.cfg.PGT.MGRID_STEPS)
         if n_schedule > 0:
             cur_idx = epoch % n_schedule
-            self.step_len = self.cfg.PGT.MGRID_STEP_LEN[cur_idx]
+            if self.cfg.MODEL.ARCH in self.cfg.MODEL.SINGLE_PATHWAY_ARCH:
+                self.step_len = self.cfg.PGT.MGRID_STEP_LEN[cur_idx][0]
+            else:
+                self.step_len = self.cfg.PGT.MGRID_STEP_LEN[cur_idx][1]
             self.steps = self.cfg.PGT.MGRID_STEPS[cur_idx]
-            self.num_frames = self.steps * self.step_len - (self.steps - 1)
+            self.num_frames = self.steps * self.step_len - (self.steps - 1) * self.overlap
 
     def __getitem__(self, index):
         """
