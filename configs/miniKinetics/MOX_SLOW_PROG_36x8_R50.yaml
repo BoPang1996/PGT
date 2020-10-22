@@ -9,8 +9,8 @@ DATA:
   PATH_PREFIX: obs://bucket-5006/data/Kinetics_400/rgb/
 
 SOLVER:
-  BASE_LR: 0.4
-  WARMUP_START_LR: 0.04
+  BASE_LR: 0.8
+  WARMUP_START_LR: 0.08
 
 TEST:
   BATCH_SIZE: 32
@@ -20,4 +20,6 @@ DATA_LOADER:
   PIN_MEMORY: False
 
 LOGS:
-  DIR: obs://bucket-5006/penggao/logs/progress-action/miniKinetics/MOX_SLOW_PROG_36x8_R50
+  DIR: obs://bucket-5006/penggao/logs/progress-action/miniKinetics/MOX_SLOW_PROG_36x8_R50_2xlr
+
+NUM_SHARDS: 2

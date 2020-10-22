@@ -19,6 +19,6 @@ DATA_LOADER:
   PIN_MEMORY: False
 
 LOGS:
-  DIR: obs://video-understanding-shanghai/penggao/logs/progress-action/Kinetics/MOX2_SLOW_PROG_36x8_R50
+  DIR: obs://video-understanding-shanghai/penggao/logs/progress-action/Kinetics/MOX2_SLOWFAST_PROG_36x8_R50
 
 NUM_SHARDS: 4

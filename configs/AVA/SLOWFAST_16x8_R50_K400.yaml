@@ -1,26 +1,32 @@
 TRAIN:
   ENABLE: True
-  DATASET: kinetics
+  DATASET: ava
   BATCH_SIZE: 64
-  EVAL_PERIOD: 10
+  EVAL_PERIOD: 1
   CHECKPOINT_PERIOD: 1
   AUTO_RESUME: True
+  CHECKPOINT_FILE_PATH: /home/pg/data/models/k400/SLOWFAST_8x8_R50.pkl
+  CHECKPOINT_TYPE: caffe2
 
 DATA:
-  NUM_FRAMES: 32
+  NUM_FRAMES: 64
   SAMPLING_RATE: 2
   TRAIN_JITTER_SCALES: [256, 320]
   TRAIN_CROP_SIZE: 224
   TEST_CROP_SIZE: 256
   INPUT_CHANNEL_NUM: [3, 3]
-  PATH_TO_DATA_DIR: /home/pg/data/Kinetics_400/
-  PATH_PREFIX: /home/pg/data/Kinetics_400/
+
+DETECTION:
+  ENABLE: True
+
+AVA:
+  DETECTION_SCORE_THRESH: 0.8
 
 SLOWFAST:
   ALPHA: 4
   BETA_INV: 8
   FUSION_CONV_CHANNEL_RATIO: 2
-  FUSION_KERNEL_SZ: 5
+  FUSION_KERNEL_SZ: 7
 
 RESNET:
   ZERO_INIT_FINAL_BN: True
@@ -30,13 +36,14 @@ RESNET:
   TRANS_FUNC: bottleneck_transform
   STRIDE_1X1: False
   NUM_BLOCK_TEMP_KERNEL: [[3, 3], [4, 4], [6, 6], [3, 3]]
-  SPATIAL_STRIDES: [[1, 1], [2, 2], [2, 2], [2, 2]]
-  SPATIAL_DILATIONS: [[1, 1], [1, 1], [1, 1], [1, 1]]
+  SPATIAL_DILATIONS: [[1, 1], [1, 1], [1, 1], [2, 2]]
+  SPATIAL_STRIDES: [[1, 1], [2, 2], [2, 2], [1, 1]]
 
 NONLOCAL:
   LOCATION: [[[], []], [[], []], [[], []], [[], []]]
   GROUP: [[1, 1], [1, 1], [1, 1], [1, 1]]
   INSTANTIATION: dot_product
+  POOL: [[[1, 2, 2], [1, 2, 2]], [[1, 2, 2], [1, 2, 2]], [[1, 2, 2], [1, 2, 2]], [[1, 2, 2], [1, 2, 2]]]
 
 BN:
   USE_PRECISE_STATS: False
@@ -44,34 +51,36 @@ BN:
 
 SOLVER:
   BASE_LR: 0.1
-  LR_POLICY: cosine
-  MAX_EPOCH: 196
+  LR_POLICY: steps_with_relative_lrs
+  STEPS: [0, 10, 15, 20]
+  LRS: [1, 0.1, 0.01, 0.001]
+  MAX_EPOCH: 20
   MOMENTUM: 0.9
-  WEIGHT_DECAY: 1e-4
-  WARMUP_EPOCHS: 34.0
-  WARMUP_START_LR: 0.01
+  WEIGHT_DECAY: 1e-7
+  WARMUP_EPOCHS: 5.0
+  WARMUP_START_LR: 0.000125
   OPTIMIZING_METHOD: sgd
 
 MODEL:
-  NUM_CLASSES: 400
+  NUM_CLASSES: 80
   ARCH: slowfast
   MODEL_NAME: SlowFast
-  LOSS_FUNC: cross_entropy
+  LOSS_FUNC: bce
   DROPOUT_RATE: 0.5
+  HEAD_ACT: sigmoid
 
 TEST:
   ENABLE: True
-  DATASET: kinetics
+  DATASET: ava
   BATCH_SIZE: 64
 
 DATA_LOADER:
-  NUM_WORKERS: 8
+  NUM_WORKERS: 2
   PIN_MEMORY: True
 
 LOGS:
-  DIR: logs/Kinetics/SLOWFAST_8x8_R50/
+  DIR: logs/AVA/SLOWFAST_16x8_R50_K400
 
 NUM_GPUS: 8
 NUM_SHARDS: 1
 RNG_SEED: 0
-
