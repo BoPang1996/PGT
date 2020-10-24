@@ -15,7 +15,7 @@ import slowfast.utils.distributed as du
 import slowfast.utils.logging as logging
 from slowfast.utils.c2_model_loading import get_name_convert_func as c2_name_convert_func
 from slowfast.utils.aia_model_loading import get_name_convert_func as aia_name_convert_func
-from slowfast.utils.setup_moxing_env import wrap_input_path2
+from slowfast.utils.setup_moxing_env import wrap_input_path2, wrap_output_path2
 
 logger = logging.get_logger(__name__)
 
@@ -133,8 +133,7 @@ def save_checkpoint(path_to_job, model, optimizer, epoch, cfg):
     }
     # Write the checkpoint.
     path_to_checkpoint = get_path_to_checkpoint(path_to_job, epoch + 1)
-    with open(path_to_checkpoint, "wb") as f:
-        torch.save(checkpoint, f)
+    wrap_output_path2(torch.save, checkpoint, path_to_checkpoint, _use_new_zipfile_serialization=False)
     return path_to_checkpoint
 
 

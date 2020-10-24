@@ -101,4 +101,4 @@ def wrap_output_path2(origin_func, data, output_path, *args, **kwargs):
             origin_ret = origin_func(data, temp_path, *args, **kwargs)
             mox.file.copy(temp_path, output_path)
     else:
-        origin_ret = origin_func(data, output_path, *args, *kwargs)
+        origin_ret = origin_func(data, output_path, *args, **kwargs)
