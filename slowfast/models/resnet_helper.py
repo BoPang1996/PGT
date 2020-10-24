@@ -9,6 +9,7 @@ import torch.nn.functional as F
 
 from slowfast.models.nonlocal_helper import Nonlocal
 from slowfast.models.progress_helper import ProgressNL
+from slowfast.models.operators import SE, Swish
 
 
 def get_trans_func(name):
@@ -18,6 +19,7 @@ def get_trans_func(name):
     trans_funcs = {
         "basic_transform": BasicTransform,
         "bottleneck_transform": BottleneckTransform,
+        "x3d_transform": X3DTransform,
     }
     assert (
         name in trans_funcs.keys()
@@ -130,6 +132,7 @@ class BottleneckTransform(nn.Module):
         bn_mmt=0.1,
         dilation=1,
         norm_module=nn.BatchNorm3d,
+        block_idx=0,
     ):
         """
         Args:
@@ -264,6 +267,7 @@ class ResBlock(nn.Module):
         bn_mmt=0.1,
         dilation=1,
         norm_module=nn.BatchNorm3d,
+        block_idx=0,
         pgt_pathway=None
     ):
         """
@@ -311,6 +315,7 @@ class ResBlock(nn.Module):
             inplace_relu,
             dilation,
             norm_module,
+            block_idx,
         )
         self.pgt_pathway = pgt_pathway
         self.cache = None
@@ -330,6 +335,7 @@ class ResBlock(nn.Module):
         inplace_relu,
         dilation,
         norm_module,
+        block_idx,
     ):
         # Use skip connection with projection if dim or res change.
         if (dim_in != dim_out) or (stride != 1):
@@ -356,6 +362,7 @@ class ResBlock(nn.Module):
             inplace_relu=inplace_relu,
             dilation=dilation,
             norm_module=norm_module,
+            block_idx=block_idx,
         )
         self.relu = nn.ReLU(self._inplace_relu)
 
@@ -564,6 +571,7 @@ class ResStage(nn.Module):
                     inplace_relu=inplace_relu,
                     dilation=dilation[pathway],
                     norm_module=norm_module,
+                    block_idx=i,
                     pgt_pathway=pathway if temp_progress else None,
                 )
                 self.add_module("pathway{}_res{}".format(pathway, i), res_block)
@@ -622,3 +630,144 @@ class ResStage(nn.Module):
             output.append(x)
 
         return output
+
+
+class X3DTransform(nn.Module):
+    """
+    X3D transformation: 1x1x1, Tx3x3 (channelwise, num_groups=dim_in), 1x1x1,
+        augmented with (optional) SE (squeeze-excitation) on the 3x3x3 output.
+        T is the temporal kernel size (defaulting to 3)
+    """
+
+    def __init__(
+        self,
+        dim_in,
+        dim_out,
+        temp_kernel_size,
+        stride,
+        dim_inner,
+        num_groups,
+        stride_1x1=False,
+        inplace_relu=True,
+        eps=1e-5,
+        bn_mmt=0.1,
+        dilation=1,
+        norm_module=nn.BatchNorm3d,
+        se_ratio=0.0625,
+        swish_inner=True,
+        block_idx=0,
+    ):
+        """
+        Args:
+            dim_in (int): the channel dimensions of the input.
+            dim_out (int): the channel dimension of the output.
+            temp_kernel_size (int): the temporal kernel sizes of the middle
+                convolution in the bottleneck.
+            stride (int): the stride of the bottleneck.
+            dim_inner (int): the inner dimension of the block.
+            num_groups (int): number of groups for the convolution. num_groups=1
+                is for standard ResNet like networks, and num_groups>1 is for
+                ResNeXt like networks.
+            stride_1x1 (bool): if True, apply stride to 1x1 conv, otherwise
+                apply stride to the 3x3 conv.
+            inplace_relu (bool): if True, calculate the relu on the original
+                input without allocating new memory.
+            eps (float): epsilon for batch norm.
+            bn_mmt (float): momentum for batch norm. Noted that BN momentum in
+                PyTorch = 1 - BN momentum in Caffe2.
+            dilation (int): size of dilation.
+            norm_module (nn.Module): nn.Module for the normalization layer. The
+                default is nn.BatchNorm3d.
+            se_ratio (float): if > 0, apply SE to the Tx3x3 conv, with the SE
+                channel dimensionality being se_ratio times the Tx3x3 conv dim.
+            swish_inner (bool): if True, apply swish to the Tx3x3 conv, otherwise
+                apply ReLU to the Tx3x3 conv.
+        """
+        super(X3DTransform, self).__init__()
+        self.temp_kernel_size = temp_kernel_size
+        self._inplace_relu = inplace_relu
+        self._eps = eps
+        self._bn_mmt = bn_mmt
+        self._se_ratio = se_ratio
+        self._swish_inner = swish_inner
+        self._stride_1x1 = stride_1x1
+        self._block_idx = block_idx
+        self._construct(
+            dim_in,
+            dim_out,
+            stride,
+            dim_inner,
+            num_groups,
+            dilation,
+            norm_module,
+        )
+
+    def _construct(
+        self,
+        dim_in,
+        dim_out,
+        stride,
+        dim_inner,
+        num_groups,
+        dilation,
+        norm_module,
+    ):
+        (str1x1, str3x3) = (stride, 1) if self._stride_1x1 else (1, stride)
+
+        # 1x1x1, BN, ReLU.
+        self.a = nn.Conv3d(
+            dim_in,
+            dim_inner,
+            kernel_size=[1, 1, 1],
+            stride=[1, str1x1, str1x1],
+            padding=[0, 0, 0],
+            bias=False,
+        )
+        self.a_bn = norm_module(
+            num_features=dim_inner, eps=self._eps, momentum=self._bn_mmt
+        )
+        self.a_relu = nn.ReLU(inplace=self._inplace_relu)
+
+        # Tx3x3, BN, ReLU.
+        self.b = nn.Conv3d(
+            dim_inner,
+            dim_inner,
+            [self.temp_kernel_size, 3, 3],
+            stride=[1, str3x3, str3x3],
+            padding=[int(self.temp_kernel_size // 2), dilation, dilation],
+            groups=num_groups,
+            bias=False,
+            dilation=[1, dilation, dilation],
+        )
+        self.b_bn = norm_module(
+            num_features=dim_inner, eps=self._eps, momentum=self._bn_mmt
+        )
+
+        # Apply SE attention or not
+        use_se = True if (self._block_idx + 1) % 2 else False
+        if self._se_ratio > 0.0 and use_se:
+            self.se = SE(dim_inner, self._se_ratio)
+
+        if self._swish_inner:
+            self.b_relu = Swish()
+        else:
+            self.b_relu = nn.ReLU(inplace=self._inplace_relu)
+
+        # 1x1x1, BN.
+        self.c = nn.Conv3d(
+            dim_inner,
+            dim_out,
+            kernel_size=[1, 1, 1],
+            stride=[1, 1, 1],
+            padding=[0, 0, 0],
+            bias=False,
+        )
+        self.c_bn = norm_module(
+            num_features=dim_out, eps=self._eps, momentum=self._bn_mmt
+        )
+        self.c_bn.transform_final_bn = True
+
+    def forward(self, x):
+        for block in self.children():
+            x = block(x)
+        return x

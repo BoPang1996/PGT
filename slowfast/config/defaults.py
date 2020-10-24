@@ -168,6 +168,38 @@ _C.REGNET = CfgNode()
 _C.REGNET.DEPTH = "400M"
 
 
+# ---------------------------------------------------------------------------- #
+# X3D  options
+# See https://arxiv.org/abs/2004.04730 for details about X3D Networks.
+# ---------------------------------------------------------------------------- #
+_C.X3D = CfgNode()
+
+# Width expansion factor.
+_C.X3D.WIDTH_FACTOR = 1.0
+
+# Depth expansion factor.
+_C.X3D.DEPTH_FACTOR = 1.0
+
+# Bottleneck expansion factor for the 3x3x3 conv.
+_C.X3D.BOTTLENECK_FACTOR = 1.0  #
+
+# Dimensions of the last linear layer before classificaiton.
+_C.X3D.DIM_C5 = 2048
+
+# Dimensions of the first 3x3 conv layer.
+_C.X3D.DIM_C1 = 12
+
+# Whether to scale the width of Res2, default is false.
+_C.X3D.SCALE_RES2 = False
+
+# Whether to use a BatchNorm (BN) layer before the classifier, default is false.
+_C.X3D.BN_LIN5 = False
+
+# Whether to use channelwise (=depthwise) convolution in the center (3x3x3)
+# convolution operation of the residual blocks.
+_C.X3D.CHANNELWISE_3x3x3 = True
+
+
 # -----------------------------------------------------------------------------
 # Nonlocal options
 # -----------------------------------------------------------------------------
@@ -249,7 +281,7 @@ _C.MODEL.LOSS_FUNC = "cross_entropy"
 
 # Model architectures that has one single pathway.
 _C.MODEL.SINGLE_PATHWAY_ARCH = [
-    "c2d", "c2d_nopool", "i3d", "i3d_nopool", "slow", "r3d"]
+    "c2d", "c2d_nopool", "i3d", "i3d_nopool", "slow", "r3d", "x3d"]
 
 # Model architectures that has multiple pathways.
 _C.MODEL.MULTI_PATHWAY_ARCH = ["slowfast"]
@@ -368,6 +400,9 @@ _C.SOLVER = CfgNode()
 
 # Base learning rate.
 _C.SOLVER.BASE_LR = 0.1
+
+# Base learning rate is linearly scaled with NUM_SHARDS.
+_C.SOLVER.BASE_LR_SCALE_NUM_SHARDS = False
 
 # Learning rate policy (see utils/lr_policy.py for options and examples).
 _C.SOLVER.LR_POLICY = "cosine"
@@ -749,6 +784,10 @@ def _assert_and_infer_cfg(cfg):
         if cfg.PGT.MGRID:
             assert len(cfg.PGT.MGRID_LRS) == len(cfg.PGT.MGRID_STEPS)
             assert len(cfg.PGT.MGRID_STEPS) == len(cfg.PGT.MGRID_STEP_LEN)
+
+    # Execute LR scaling by num_shards.
+    if cfg.SOLVER.BASE_LR_SCALE_NUM_SHARDS:
+        cfg.SOLVER.BASE_LR *= cfg.NUM_SHARDS
 
     # General assertions.
     assert cfg.SHARD_ID < cfg.NUM_SHARDS
