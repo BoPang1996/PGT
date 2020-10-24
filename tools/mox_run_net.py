@@ -28,8 +28,7 @@ def pip_install(package):
     subprocess.call([sys.executable, "-m", "pip", "install", package],
                     stdout=FNULL, stderr=subprocess.STDOUT)
     # output
-    # subprocess.call([sys.executable, "-m", "pip", "install", package],
-    #                 stdout=FNULL, stderr=subprocess.STDOUT)
+    # subprocess.call([sys.executable, "-m", "pip", "install", package])
 
 
 def pip_install_directory(local_dir_path):
@@ -56,6 +55,9 @@ if __name__ == "__main__":
     pip_install_directory(PIP_LOCAL_PATH)
     pip_install('tensorboardX')
     print("Install pip packages finished!")
+    import torch, torchvision
+    print("torch version: {}".format(torch.__version__))
+    print("torchvision version: {}".format(torchvision.__version__))
 
     sys.path.append('progress-action/')
     from run_net import main

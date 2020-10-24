@@ -7,7 +7,7 @@ TRAIN:
   CHECKPOINT_PERIOD: 1
   AUTO_RESUME: True
   CHECKPOINT_TYPE: pytorch
-  CHECKPOINT_FILE_PATH: /home/pg/projects/action/progress-action/logs/Kinetics/MOX2_SLOW_8x8_R101.75.76/checkpoints/checkpoint_epoch_00196.pyth
+  CHECKPOINT_FILE_PATH: /home/pg/data/models/k400/SLOWFAST_8x8_R101.pyth
 
 DATA:
   NUM_FRAMES: 16

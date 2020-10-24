@@ -11,3 +11,4 @@ sklearn
 tensorboardX
 torch
 torchvision
+tqdm
