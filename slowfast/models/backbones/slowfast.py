@@ -77,13 +77,7 @@ class FuseFastToSlow(nn.Module):
             fuse = self.relu(fuse)
         if fuse.size(2) > x_s.size(2):
             assert self.cfg.PGT.ENABLE
-            # TODO: when PG_EVAL is False, how to match?
-            # 1. [-36:] --> not working
-            # 2. 8,(1),7,(1),7,7=39
-            if self.training or self.cfg.PGT.PG_EVAL:
-                fuse = fuse[:, :, self.cfg.PGT.OVERLAP[0]:, ...]
-            else:
-                fuse = fuse[:, :, -x_s.size(2):]
+            fuse = fuse[:, :, self.cfg.PGT.OVERLAP[0]:, ...]
         x_s_fuse = torch.cat([x_s, fuse], 1)
         return [x_s_fuse, x_f]
 

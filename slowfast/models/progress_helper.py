@@ -89,7 +89,7 @@ class ProgressTrainer(object):
 
         # log model for 1st epoch and test
         if du.is_master_proc() and (epoch == 0 or epoch is None):
-            self.logger.info(str(self.model.head))
+            self.logger.info(str(ms.head))
 
     def step_train(self, inputs, labels, bboxes=None):
         losses = []
@@ -150,7 +150,7 @@ class ProgressTrainer(object):
     @torch.no_grad()
     def step_eval(self, inputs, bboxes=None):
         if not self.progress_eval:
-            if bboxes != None:
+            if bboxes is not None:
                 preds = self.model(inputs, bboxes)
             else:
                 preds = self.model(inputs)
