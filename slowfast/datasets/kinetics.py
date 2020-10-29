@@ -232,6 +232,8 @@ class Kinetics(torch.utils.data.Dataset):
             else:
                 num_frames = self.cfg.DATA.NUM_FRAMES
 
+            cyclic_load = self.cfg.TEST.CYCLIC_LOAD and self.mode == "test"
+
             # Decode video. Meta info is used to perform selective decoding.
             frames = decoder.decode(
                 video_container,
@@ -243,6 +245,7 @@ class Kinetics(torch.utils.data.Dataset):
                 target_fps=self.cfg.DATA.TARGET_FPS,
                 backend=self.cfg.DATA.DECODING_BACKEND,
                 max_spatial_scale=max_scale,
+                cyclic_load=cyclic_load,
             )
 
             # If decoding failed (wrong format, video is too short, and etc),

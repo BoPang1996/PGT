@@ -115,6 +115,9 @@ _C.TEST.CHECKPOINT_TYPE = "pytorch"
 # If True, strict loading checkpoint
 _C.TEST.CHECKPOINT_STRICT = False
 
+# If True, Cyclic load data for multi-view test.
+_C.TEST.CYCLIC_LOAD = False
+
 
 # -----------------------------------------------------------------------------
 # ResNet options
