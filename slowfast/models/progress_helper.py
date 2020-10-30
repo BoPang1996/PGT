@@ -94,11 +94,13 @@ class ProgressTrainer(object):
         if du.is_master_proc() and (epoch == 0 or epoch is None):
             self.logger.info(str(ms.head))
 
-    def step_train(self, inputs, labels, bboxes=None):
+    def step_train(self, inputs, labels, bboxes=None, step_idxes=None):
         losses = []
         preds = []
+        last_labels = None
 
         for step in range(self.steps):
+            assert (step_idxes == step).any()
             if step == 0:
                 start_idx = [0, 0]
                 end_idx = self.num_frames
@@ -117,14 +119,16 @@ class ProgressTrainer(object):
 
             # Forward
             if bboxes != None:
-                pred = self.model(pg_input, bboxes)
+                pred = self.model(pg_input, bboxes[step_idxes == step])
             else:
                 pred = self.model(pg_input)
 
             if len(labels.size()) > 2:  # for charades
                 loss = self.loss_fun(pred, labels[:, step])
-            else:  # for kinetics and ava
-                # FIXME: ava step labels
+            elif bboxes is not None:  # for AVA
+                last_labels = labels[step_idxes == step]
+                loss = self.loss_fun(pred, last_labels)
+            else:  # for kinetics
                 loss = self.loss_fun(pred, labels)
 
             # Check Nan Loss.
@@ -148,13 +152,27 @@ class ProgressTrainer(object):
 
         preds = pred  # take the last step for train acc/map calucaltion
         loss_mean = torch.stack(losses, dim=0).mean()
-        return preds, loss_mean
+        return preds, last_labels, loss_mean  # return labels of last step for AVA
 
     @torch.no_grad()
-    def step_eval(self, inputs, bboxes=None):
+    def step_eval(self, inputs, bboxes=None, step_idxes=None):
         if not self.progress_eval:
-            if bboxes is not None:
-                preds = self.model(inputs, bboxes)
+            if bboxes is not None:  # AVA
+                # slice inputs to the last step
+                step = self.steps - 1
+                start_idx, end_idx = [], []
+                for nf, ov in zip(self.num_frames, self.overlap):
+                    start_idx.append(step * nf - (step - 1) * ov)
+                    end_idx.append(start_idx[-1] + nf - ov)
+                if self.single_pathway:  # Add one frame to last step
+                    slices = [slice(start_idx[0] - 1, end_idx[0])]
+                else:
+                    slices = [
+                        slice(start_idx[0] - 1, end_idx[0]),
+                        slice(start_idx[1] - 1, end_idx[1])
+                    ]
+                
+                preds = self.model(inputs, bboxes, slices)
             else:
                 preds = self.model(inputs)
 
@@ -162,6 +180,8 @@ class ProgressTrainer(object):
             preds = []
 
             for step in range(self.steps):
+                if step_idxes is not None:
+                    assert (step_idxes == step).any()
                 if step == 0:
                     start_idx = [0, 0]
                     end_idx = self.num_frames
@@ -180,16 +200,25 @@ class ProgressTrainer(object):
 
                 # Forward
                 if bboxes != None:
-                    pred = self.model(pg_input, bboxes)
+                    if step_idxes is None:
+                        pred = self.model(pg_input, bboxes)
+                    else:
+                        pred = self.model(pg_input, bboxes[step_idxes == step])
                 else:
                     pred = self.model(pg_input)
 
                 preds.append(pred)
-
-            if self.ensemble_method == "sum":
-                preds = torch.stack(preds, dim=1).sum(dim=1)
-            elif self.ensemble_method == "max":
-                preds = torch.stack(preds, dim=1).max(dim=1)[0]
+            
+            if bboxes is not None:
+                if step_idxes is None:
+                    preds = pred  # Take the result of last step
+                else:  # Return result of all steps
+                    preds = torch.cat(preds, dim=0)
+            else:
+                if self.ensemble_method == "sum":
+                    preds = torch.stack(preds, dim=1).sum(dim=1)
+                elif self.ensemble_method == "max":
+                    preds = torch.stack(preds, dim=1).max(dim=1)[0]
 
         return preds
 

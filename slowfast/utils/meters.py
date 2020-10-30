@@ -196,6 +196,27 @@ class AVAMeter(object):
         all_ori_boxes = torch.cat(self.all_ori_boxes, dim=0)
         all_metadata = torch.cat(self.all_metadata, dim=0)
 
+        # Get the mean of all outputs
+        all_metadata_uni, indices, counts = torch.unique(
+            all_metadata, return_inverse=True, return_counts=True, dim=0
+        )
+
+        all_preds_uni = all_preds.new_zeros(
+            (all_metadata_uni.size(0), all_preds.size(1)))
+        all_ori_boxes_uni = all_preds.new_zeros(
+            (all_metadata_uni.size(0), all_ori_boxes.size(1)))
+
+        all_ori_boxes_uni[indices] = all_ori_boxes
+
+        for i, index in enumerate(indices):
+            all_preds_uni += all_preds[i]
+        
+        all_preds_uni /= counts[:, None]
+
+        all_preds, all_ori_boxes, all_metadata = (
+            all_preds_uni, all_ori_boxes_uni, all_metadata_uni[:, :2]
+        )
+
         if self.mode == "test" or (self.full_ava_test and self.mode == "val"):
             groundtruth = self.full_groundtruth
         else:

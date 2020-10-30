@@ -205,7 +205,7 @@ class ResNet(nn.Module):
                 act_func=cfg.MODEL.HEAD_ACT,
             )
 
-    def forward(self, x, bboxes=None):
+    def forward(self, x, bboxes=None, slices=None):
         x = self.s1(x)
         x = self.s2(x)
         for pathway in range(self.num_pathways):
@@ -215,7 +215,7 @@ class ResNet(nn.Module):
         x = self.s4(x)
         x = self.s5(x)
         if self.enable_detection:
-            x = self.head(x, bboxes)
+            x = self.head(x, bboxes, slices)
         else:
             x = self.head(x)
         return x

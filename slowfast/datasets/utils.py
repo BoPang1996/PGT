@@ -61,7 +61,11 @@ def get_sequence(center_idx, half_len, sample_rate, num_frames):
     Returns:
         seq (list): list of indexes of sampled frames in this clip.
     """
-    seq = list(range(center_idx - half_len, center_idx + half_len, sample_rate))
+    if isinstance(half_len, list):
+        assert len(half_len) == 2, "Wrong number of half lengths"
+        seq = list(range(center_idx - half_len[0], center_idx + half_len[1], sample_rate))
+    else:
+        seq = list(range(center_idx - half_len, center_idx + half_len, sample_rate))
 
     for seq_idx in range(len(seq)):
         if seq[seq_idx] < 0:

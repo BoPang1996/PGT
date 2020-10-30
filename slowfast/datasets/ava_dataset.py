@@ -44,6 +44,15 @@ class Ava(torch.utils.data.Dataset):
             self._crop_size = cfg.DATA.TEST_CROP_SIZE
             self._test_force_flip = cfg.AVA.TEST_FORCE_FLIP
 
+        self.pgt = cfg.PGT.ENABLE
+        if self.pgt:
+            assert (
+                len(cfg.PGT.STEP_LEN) == 1
+            ), "Only single pathway is supported currently"
+            self.steps = cfg.PGT.STEPS
+            self.overlap = cfg.PGT.OVERLAP[0]
+            self.num_frames = cfg.PGT.STEP_LEN[0]
+
         self._load_data(cfg)
 
     def _load_data(self, cfg):
@@ -54,15 +63,12 @@ class Ava(torch.utils.data.Dataset):
             cfg (CfgNode): config
         """
         # Loading frame paths.
-        (
-            self._image_paths,
-            self._video_idx_to_name,
-        ) = ava_helper.load_image_lists(cfg, is_train=(self._split == "train"))
+        (self._image_paths, self._video_idx_to_name,) = ava_helper.load_image_lists(
+            cfg, is_train=(self._split == "train")
+        )
 
         # Loading annotations for boxes and labels.
-        boxes_and_labels = ava_helper.load_boxes_and_labels(
-            cfg, mode=self._split
-        )
+        boxes_and_labels = ava_helper.load_boxes_and_labels(cfg, mode=self._split)
 
         assert len(boxes_and_labels) == len(self._image_paths) or cfg.DEBUG
 
@@ -76,6 +82,11 @@ class Ava(torch.utils.data.Dataset):
             self._keyframe_indices,
             self._keyframe_boxes_and_labels,
         ) = ava_helper.get_keyframe_data(boxes_and_labels)
+
+        self._keyframe_secs = {
+            (v_idx, sec): idx
+            for idx, (v_idx, _, sec, _) in enumerate(self._keyframe_indices)
+        }
 
         # Calculate the number of used boxes.
         self._num_boxes_used = ava_helper.get_num_boxes_used(
@@ -143,9 +154,7 @@ class Ava(torch.utils.data.Dataset):
             # Short side to test_scale. Non-local and STRG uses 256.
             imgs = [cv2_transform.scale(self._crop_size, img) for img in imgs]
             boxes = [
-                cv2_transform.scale_boxes(
-                    self._crop_size, boxes[0], height, width
-                )
+                cv2_transform.scale_boxes(self._crop_size, boxes[0], height, width)
             ]
             imgs, boxes = cv2_transform.spatial_shift_crop_list(
                 self._crop_size, imgs, 1, boxes=boxes
@@ -159,9 +168,7 @@ class Ava(torch.utils.data.Dataset):
             # Short side to test_scale. Non-local and STRG uses 256.
             imgs = [cv2_transform.scale(self._crop_size, img) for img in imgs]
             boxes = [
-                cv2_transform.scale_boxes(
-                    self._crop_size, boxes[0], height, width
-                )
+                cv2_transform.scale_boxes(self._crop_size, boxes[0], height, width)
             ]
 
             if self._test_force_flip:
@@ -169,9 +176,7 @@ class Ava(torch.utils.data.Dataset):
                     1, imgs, order="HWC", boxes=boxes
                 )
         else:
-            raise NotImplementedError(
-                "Unsupported split mode {}".format(self._split)
-            )
+            raise NotImplementedError("Unsupported split mode {}".format(self._split))
 
         # Convert image to CHW keeping BGR order.
         imgs = [cv2_transform.HWC2CHW(img) for img in imgs]
@@ -191,10 +196,7 @@ class Ava(torch.utils.data.Dataset):
         if self._split == "train" and self._use_color_augmentation:
             if not self._pca_jitter_only:
                 imgs = cv2_transform.color_jitter_list(
-                    imgs,
-                    img_brightness=0.4,
-                    img_contrast=0.4,
-                    img_saturation=0.4,
+                    imgs, img_brightness=0.4, img_contrast=0.4, img_saturation=0.4,
                 )
 
             imgs = cv2_transform.lighting_list(
@@ -215,9 +217,7 @@ class Ava(torch.utils.data.Dataset):
         ]
 
         # Concat list of images to single ndarray.
-        imgs = np.concatenate(
-            [np.expand_dims(img, axis=1) for img in imgs], axis=1
-        )
+        imgs = np.concatenate([np.expand_dims(img, axis=1) for img in imgs], axis=1)
 
         if not self._use_bgr:
             # Convert image format from BGR to RGB.
@@ -262,9 +262,7 @@ class Ava(torch.utils.data.Dataset):
                 max_size=self._jitter_max_scale,
                 boxes=boxes,
             )
-            imgs, boxes = transform.random_crop(
-                imgs, self._crop_size, boxes=boxes
-            )
+            imgs, boxes = transform.random_crop(imgs, self._crop_size, boxes=boxes)
 
             # Random flip.
             imgs, boxes = transform.horizontal_flip(0.5, imgs, boxes=boxes)
@@ -272,10 +270,7 @@ class Ava(torch.utils.data.Dataset):
             # Val split
             # Resize short side to crop_size. Non-local and STRG uses 256.
             imgs, boxes = transform.random_short_side_scale_jitter(
-                imgs,
-                min_size=self._crop_size,
-                max_size=self._crop_size,
-                boxes=boxes,
+                imgs, min_size=self._crop_size, max_size=self._crop_size, boxes=boxes,
             )
 
             # Apply center crop for val split
@@ -289,27 +284,19 @@ class Ava(torch.utils.data.Dataset):
             # Test split
             # Resize short side to crop_size. Non-local and STRG uses 256.
             imgs, boxes = transform.random_short_side_scale_jitter(
-                imgs,
-                min_size=self._crop_size,
-                max_size=self._crop_size,
-                boxes=boxes,
+                imgs, min_size=self._crop_size, max_size=self._crop_size, boxes=boxes,
             )
 
             if self._test_force_flip:
                 imgs, boxes = transform.horizontal_flip(1, imgs, boxes=boxes)
         else:
-            raise NotImplementedError(
-                "{} split not supported yet!".format(self._split)
-            )
+            raise NotImplementedError("{} split not supported yet!".format(self._split))
 
         # Do color augmentation (after divided by 255.0).
         if self._split == "train" and self._use_color_augmentation:
             if not self._pca_jitter_only:
                 imgs = transform.color_jitter(
-                    imgs,
-                    img_brightness=0.4,
-                    img_contrast=0.4,
-                    img_saturation=0.4,
+                    imgs, img_brightness=0.4, img_contrast=0.4, img_saturation=0.4,
                 )
 
             imgs = transform.lighting_jitter(
@@ -331,9 +318,7 @@ class Ava(torch.utils.data.Dataset):
             # Note that Kinetics pre-training uses RGB!
             imgs = imgs[:, [2, 1, 0], ...]
 
-        boxes = transform.clip_boxes_to_image(
-            boxes, self._crop_size, self._crop_size
-        )
+        boxes = transform.clip_boxes_to_image(boxes, self._crop_size, self._crop_size)
 
         return imgs, boxes
 
@@ -357,14 +342,64 @@ class Ava(torch.utils.data.Dataset):
         """
         video_idx, sec_idx, sec, center_idx = self._keyframe_indices[idx]
         # Get the frame idxs for current clip.
+        # Align keyframe with last step
+        last_half_len = self.num_frames // 2 * self._sample_rate
         seq = utils.get_sequence(
             center_idx,
-            self._seq_len // 2,
+            [self._seq_len - last_half_len, last_half_len],
             self._sample_rate,
             num_frames=len(self._image_paths[video_idx]),
         )
 
-        clip_label_list = self._keyframe_boxes_and_labels[video_idx][sec_idx]
+        if self.pgt:
+            # Get center_idx for each step
+            step_center_idxes = [
+                seq[
+                    self.num_frames // 2 + i * (self.num_frames - 1)
+                ]
+                for i in range(self.steps)
+            ]
+            # Find closest sec
+            secs = [round(x / 30) + 900 for x in step_center_idxes]
+            assert secs[-1] == sec
+            # clip_label_lists = []
+            # for s in secs:
+            #     if (video_idx, s) not in self._keyframe_secs:
+            #         s = secs[-1]  # replace empty frame with last keyframe
+            #     _, sec_idx, _, _ = self._keyframe_indices[
+            #         self._keyframe_secs[(video_idx, s)]
+            #     ]
+            #     clip_label_lists.append(
+            #         self._keyframe_boxes_and_labels[video_idx][sec_idx]
+            #     )
+
+            # # cat all boxes and labels
+            # step_idxes = []
+            # clip_label_list = []
+            # for step, cll in enumerate(clip_label_lists):
+            #     step_idxes += [step] * len(cll)
+            #     clip_label_list += cll
+            # step_idxes = np.array(step_idxes, dtype=np.int32)
+
+            step_idxes = []
+            clip_label_list = []
+            metadata = []
+            for step, s in enumerate(secs):
+                if (video_idx, s) not in self._keyframe_secs:
+                    s = secs[-1]  # replace empty frame with last keyframe
+                _, sec_idx, _, _ = self._keyframe_indices[
+                    self._keyframe_secs[(video_idx, s)]
+                ]
+                cll = self._keyframe_boxes_and_labels[video_idx][sec_idx]
+                step_idxes += [step] * len(cll)
+                clip_label_list += cll
+                metadata += [[video_idx, s, i] for i in range(len(cll))]
+
+            step_idxes = np.array(step_idxes, dtype=np.int32)
+        else:
+            clip_label_list = self._keyframe_boxes_and_labels[video_idx][sec_idx]
+            metadata = [[video_idx, sec, i] for i in range(len(clip_label_list))]
+
         assert len(clip_label_list) > 0
 
         # Get boxes and labels for current clip.
@@ -387,16 +422,12 @@ class Ava(torch.utils.data.Dataset):
             # T H W C -> T C H W.
             imgs = imgs.permute(0, 3, 1, 2)
             # Preprocess images and boxes.
-            imgs, boxes = self._images_and_boxes_preprocessing(
-                imgs, boxes=boxes
-            )
+            imgs, boxes = self._images_and_boxes_preprocessing(imgs, boxes=boxes)
             # T C H W -> C T H W.
             imgs = imgs.permute(1, 0, 2, 3)
         else:
             # Preprocess images and boxes
-            imgs, boxes = self._images_and_boxes_preprocessing_cv2(
-                imgs, boxes=boxes
-            )
+            imgs, boxes = self._images_and_boxes_preprocessing_cv2(imgs, boxes=boxes)
 
         # Construct label arrays.
         label_arrs = np.zeros((len(labels), self._num_classes), dtype=np.int32)
@@ -409,12 +440,13 @@ class Ava(torch.utils.data.Dataset):
                 label_arrs[i][label - 1] = 1
 
         imgs = utils.pack_pathway_output(self.cfg, imgs)
-        metadata = [[video_idx, sec]] * len(boxes)
+        assert len(boxes) == len(clip_label_list)
 
         extra_data = {
             "boxes": boxes,
             "ori_boxes": ori_boxes,
             "metadata": metadata,
+            "step_idxes": step_idxes,
         }
 
         return imgs, label_arrs, idx, extra_data
