@@ -788,6 +788,7 @@ def _assert_and_infer_cfg(cfg):
     # Execute LR scaling by num_shards.
     if cfg.SOLVER.BASE_LR_SCALE_NUM_SHARDS:
         cfg.SOLVER.BASE_LR *= cfg.NUM_SHARDS
+        cfg.SOLVER.WARMUP_START_LR *= cfg.NUM_SHARDS
 
     # General assertions.
     assert cfg.SHARD_ID < cfg.NUM_SHARDS

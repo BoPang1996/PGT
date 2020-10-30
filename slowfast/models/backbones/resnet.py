@@ -66,6 +66,7 @@ class ResNet(nn.Module):
         temp_kernel = _TEMPORAL_KERNEL_BASIS[cfg.MODEL.ARCH]
 
         self.s1 = stem_helper.VideoModelStem(
+            cfg=cfg,
             dim_in=cfg.DATA.INPUT_CHANNEL_NUM,
             dim_out=[width_per_group],
             kernel=[temp_kernel[0][0] + [7, 7]],

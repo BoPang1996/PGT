@@ -100,6 +100,7 @@ class X3D(nn.Module):
         temp_kernel = _TEMPORAL_KERNEL_BASIS[cfg.MODEL.ARCH]
 
         self.s1 = stem_helper.VideoModelStem(
+            cfg=cfg,
             dim_in=cfg.DATA.INPUT_CHANNEL_NUM,
             dim_out=[dim_res1],
             kernel=[temp_kernel[0][0] + [3, 3]],
@@ -156,6 +157,7 @@ class X3D(nn.Module):
                 dim_out=cfg.X3D.DIM_C5,
                 num_classes=cfg.MODEL.NUM_CLASSES,
                 pool_size=[cfg.DATA.NUM_FRAMES, spat_sz, spat_sz],
+                pool_type=cfg.MODEL.FINAL_POOL,
                 dropout_rate=cfg.MODEL.DROPOUT_RATE,
                 act_func=cfg.MODEL.HEAD_ACT,
                 bn_lin5_on=cfg.X3D.BN_LIN5,

@@ -251,6 +251,7 @@ class X3DHead(nn.Module):
         dim_out,
         num_classes,
         pool_size,
+        pool_type=["avg", "avg"],
         dropout_rate=0.0,
         act_func="softmax",
         inplace_relu=True,
@@ -284,6 +285,7 @@ class X3DHead(nn.Module):
         """
         super(X3DHead, self).__init__()
         self.pool_size = pool_size
+        self.pool_type = pool_type
         self.dropout_rate = dropout_rate
         self.num_classes = num_classes
         self.act_func = act_func
@@ -308,10 +310,19 @@ class X3DHead(nn.Module):
         )
         self.conv_5_relu = nn.ReLU(self.inplace_relu)
 
-        if self.pool_size is None:
-            self.avg_pool = nn.AdaptiveAvgPool3d((1, 1, 1))
-        else:
-            self.avg_pool = nn.AvgPool3d(self.pool_size, stride=1)
+        if self.pool_type[0] == "avg":
+            s_pool = nn.AvgPool3d(
+                [1, self.pool_size[1], self.pool_size[2]], stride=1)
+        elif self.pool_type[0] == "max":
+            s_pool = nn.MaxPool3d(
+                [1, self.pool_size[1], self.pool_size[2]], stride=1)
+        self.s_pool = s_pool
+
+        if self.pool_type[1] == "avg":
+            t_pool = nn.AvgPool3d([self.pool_size[0], 1, 1], stride=1)
+        elif self.pool_type[1] == "max":
+            t_pool = nn.MaxPool3d([self.pool_size[0], 1, 1], stride=1)
+        self.t_pool = t_pool
 
         self.lin_5 = nn.Conv3d(
             dim_inner,
@@ -351,7 +362,7 @@ class X3DHead(nn.Module):
         x = self.conv_5(inputs[0])
         x = self.conv_5_bn(x)
         x = self.conv_5_relu(x)
-        x = self.avg_pool(x)
+        x = self.t_pool(self.s_pool(x))
 
         x = self.lin_5(x)
         if self.bn_lin5_on:

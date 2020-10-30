@@ -5,7 +5,7 @@ import math
 import numpy as np
 import random
 import torch
-import torchvision.io as io
+# import torchvision.io as io
 
 
 def temporal_sampling(frames, start_idx, end_idx, num_samples):

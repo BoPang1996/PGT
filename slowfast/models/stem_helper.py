@@ -3,6 +3,7 @@
 
 """ResNe(X)t 3D stem helper."""
 
+import torch
 import torch.nn as nn
 
 
@@ -28,6 +29,7 @@ class VideoModelStem(nn.Module):
 
     def __init__(
         self,
+        cfg,
         dim_in,
         dim_out,
         kernel,
@@ -81,6 +83,7 @@ class VideoModelStem(nn.Module):
             )
             == 1
         ), "Input pathway dimensions are not consistent."
+        self.cfg = cfg
         self.num_pathways = len(dim_in)
         self.kernel = kernel
         self.stride = stride
@@ -90,6 +93,9 @@ class VideoModelStem(nn.Module):
         self.bn_mmt = bn_mmt
         # Construct the stem layer.
         self._construct_stem(dim_in, dim_out, stem_func_name, norm_module, pool_pad)
+        if cfg.PGT.ENABLE:
+            self.cache = None
+            self.nframes = self.cfg.PGT.STEP_LEN
 
     def _construct_stem(self, dim_in, dim_out, stem_func_name, norm_module, pool_pad):
         stem_func = get_stem_func(stem_func_name)
@@ -114,8 +120,29 @@ class VideoModelStem(nn.Module):
             len(x) == self.num_pathways
         ), "Input tensor does not contain {} pathway".format(self.num_pathways)
         for pathway in range(len(x)):
+            # Progress padding when temp kernel
+            if self.cfg.PGT.ENABLE and self.kernel[pathway][0] > 1:
+                t = x[pathway].size(2)
+                if t < self.nframes[pathway]:
+                    x[pathway] = torch.cat([self.cache, x[pathway]], dim=2)
+                else: # reset cache
+                    self.cache = None
+                if self.cfg.PGT.CACHE == "last":
+                    cache = x[pathway][:, :, -1, ...].unsqueeze(2)
+                elif self.cfg.PGT.CACHE == "max":
+                    cache = F.max_pool3d(x[pathway], (t, 1, 1), 1)
+                elif self.cfg.PGT.CACHE == "avg":
+                    cache = F.avg_pool3d(x[pathway], (t, 1, 1), 1)
             m = getattr(self, "pathway{}_stem".format(pathway))
             x[pathway] = m(x[pathway])
+
+            # Remove progress padding and update cache
+            if self.cfg.PGT.ENABLE and self.kernel[pathway][0] > 1:
+                if isinstance(self.cache, torch.Tensor):
+                    x[pathway] = x[pathway][:, :, 1:, ...]
+                    momentum = self.cfg.PGT.CACHE_MOMENTUM
+                    cache = (1 - momentum) * cache + momentum * self.cache
+                self.cache = cache if self.cfg.PGT.TRUNCATE_GRAD else cache.detach()
         return x
 
 

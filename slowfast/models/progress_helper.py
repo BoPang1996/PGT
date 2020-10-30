@@ -5,7 +5,7 @@ import torch.nn.parallel.distributed as dist
 
 from slowfast.models import optimizer as optim
 from slowfast.models.batchnorm_helper import FrozenBatchNorm3d
-from slowfast.models.head_helper import ResNetBasicHead, ResNetRoIHead
+from slowfast.models.head_helper import ResNetBasicHead, ResNetRoIHead, X3DHead
 from slowfast.utils import distributed as du
 from slowfast.utils import logging as logging
 from slowfast.utils import misc as misc
@@ -81,15 +81,18 @@ class ProgressTrainer(object):
             ]
         ms = self.model.module if cfg.NUM_GPUS > 1 else self.model
         if hasattr(ms, "head"):
-            ms.head.s0_tpool = t_pool[0]
-            if not self.single_pathway:
-                ms.head.s1_tpool = t_pool[1]
+            if isinstance(ms.head, ResNetBasicHead) or isinstance(ms.head, ResNetRoIHead):
+                ms.head.s0_tpool = t_pool[0]
+                if not self.single_pathway:
+                    ms.head.s1_tpool = t_pool[1]
+            elif isinstance(ms.head, X3DHead):
+                ms.head.t_pool = t_pool[0]
         else:  # regnet
             ms.avgpool = nn.AdaptiveAvgPool3d((tpool_size[0], 1, 1))
 
         # log model for 1st epoch and test
         if du.is_master_proc() and (epoch == 0 or epoch is None):
-            self.logger.info(str(self.model.head))
+            self.logger.info(str(ms.head))
 
     def step_train(self, inputs, labels, bboxes=None):
         losses = []
