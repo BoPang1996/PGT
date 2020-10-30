@@ -217,6 +217,7 @@ class Charades(torch.utils.data.Dataset):
                 start = random.randint(0, video_length - clip_length)
         else:
             # no temporal ensemble, start from 0
+            # TODO: support cyclic loading
             if self.cfg.TEST.NUM_ENSEMBLE_VIEWS == 1:
                 start = 0
             else:
