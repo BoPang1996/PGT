@@ -111,6 +111,7 @@ def torchvision_decode(
     target_fps=30,
     modalities=("visual",),
     max_spatial_scale=0,
+    decode_all=False,
 ):
     """
     If video_meta is not empty, perform temporal selective decoding to sample a
@@ -197,7 +198,8 @@ def torchvision_decode(
 
 
 def pyav_decode(
-    container, sampling_rate, num_frames, clip_idx, num_clips=10, target_fps=30
+    container, sampling_rate, num_frames, clip_idx,
+    num_clips=10, target_fps=30, decode_all=False
 ):
     """
     Convert the video from its original fps to the target_fps. If the video
@@ -230,6 +232,8 @@ def pyav_decode(
     fps = float(container.streams.video[0].average_rate)
     frames_length = container.streams.video[0].frames
     duration = container.streams.video[0].duration
+    if decode_all:
+        duration = None
 
     if duration is None:
         # If failed to fetch the decoding information, decode the entire video.
@@ -275,6 +279,7 @@ def decode(
     target_fps=30,
     backend="pyav",
     max_spatial_scale=0,
+    cyclic_load=False,
 ):
     """
     Decode the video and perform temporal sampling.
@@ -312,6 +317,7 @@ def decode(
                 clip_idx,
                 num_clips,
                 target_fps,
+                cyclic_load,
             )
         elif backend == "torchvision":
             frames, fps, decode_all_video = torchvision_decode(
@@ -324,6 +330,7 @@ def decode(
                 target_fps,
                 ("visual",),
                 max_spatial_scale,
+                cyclic_load,
             )
         else:
             raise NotImplementedError(
@@ -340,9 +347,15 @@ def decode(
     start_idx, end_idx = get_start_end_idx(
         frames.shape[0],
         num_frames * sampling_rate * fps / target_fps,
-        clip_idx if decode_all_video else 0,
-        num_clips if decode_all_video else 1,
+        clip_idx if (decode_all_video and not cyclic_load) else 0,
+        num_clips if (decode_all_video and not cyclic_load) else 1,
     )
+
+    if cyclic_load:
+        delta = num_frames * sampling_rate * fps / target_fps
+        cut_idx = int((delta * clip_idx) % frames.shape[0])
+        frames = torch.cat((frames[cut_idx:], frames[:cut_idx]), dim=0)
+
     # Perform temporal sampling from the decoded video.
     frames = temporal_sampling(frames, start_idx, end_idx, num_frames)
     return frames

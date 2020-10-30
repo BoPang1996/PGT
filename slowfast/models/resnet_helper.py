@@ -370,11 +370,14 @@ class ResBlock(nn.Module):
         assert self.pgt_pathway != None
         self.nframes = nframes[self.pgt_pathway]
 
+    def clear_cache(self):
+        self.cache = None
+
     def forward(self, x):
         # Progress padding
         if self.pgt_pathway != None:
             # FIXME: it's possible the intermediate feature map's T has been
-            # pooled. Current implmentation only supports slow and slowfast.
+            # pooled. Current implmentation does not supports i3d.
             if x.size(2) < self.nframes: # pg step
                 x = torch.cat([self.cache, x], dim=2)
             else: # reset cache

@@ -153,7 +153,7 @@ class ProgressTrainer(object):
     @torch.no_grad()
     def step_eval(self, inputs, bboxes=None):
         if not self.progress_eval:
-            if bboxes != None:
+            if bboxes is not None:
                 preds = self.model(inputs, bboxes)
             else:
                 preds = self.model(inputs)

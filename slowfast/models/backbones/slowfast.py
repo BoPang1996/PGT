@@ -76,6 +76,7 @@ class FuseFastToSlow(nn.Module):
         if self.cfg.SLOWFAST.FUSION_RELU:
             fuse = self.relu(fuse)
         if fuse.size(2) > x_s.size(2):
+            assert self.cfg.PGT.ENABLE
             fuse = fuse[:, :, self.cfg.PGT.OVERLAP[0]:, ...]
         x_s_fuse = torch.cat([x_s, fuse], 1)
         return [x_s_fuse, x_f]
