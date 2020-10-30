@@ -42,10 +42,12 @@ def detection_collate(batch):
             ]
             bboxes = np.concatenate(bboxes, axis=0)
             collated_extra_data[key] = torch.tensor(bboxes).float()
+        elif key == "step_idxes":
+            collated_extra_data[key] = torch.tensor(np.concatenate(data, axis=0))
         elif key == "metadata":
             collated_extra_data[key] = torch.tensor(
                 list(itertools.chain(*data))
-            ).view(-1, 2)
+            ).view(-1, 3)
         else:
             collated_extra_data[key] = default_collate(data)
 

@@ -76,7 +76,15 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None, cur_epoch=Non
             if not cfg.PGT.ENABLE:
                 preds = model(inputs, meta["boxes"])
             else:
-                preds = pg_trainer.step_eval(inputs, meta["boxes"])
+                # Take the meta of last step
+                if not cfg.PGT.ALL_STEP_TEST:
+                    step_idx = pg_trainer.steps - 1
+                    meta["boxes"] = meta["boxes"][meta["step_idxes"] == step_idx]
+                    meta["ori_boxes"] = meta["ori_boxes"][meta["step_idxes"] == step_idx]
+                    meta["metadata"] = meta["metadata"][meta["step_idxes"] == step_idx]
+                    preds = pg_trainer.step_eval(inputs, meta["boxes"])
+                else:
+                    preds = pg_trainer.step_eval(inputs, meta["boxes"], meta["step_idxes"])
             preds = preds.cpu()
             ori_boxes = meta["ori_boxes"].cpu()
             metadata = meta["metadata"].cpu()
