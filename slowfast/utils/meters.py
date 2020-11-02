@@ -209,7 +209,7 @@ class AVAMeter(object):
         all_ori_boxes_uni[indices] = all_ori_boxes
 
         for i, index in enumerate(indices):
-            all_preds_uni += all_preds[i]
+            all_preds_uni[index] += all_preds[i]
         
         all_preds_uni /= counts[:, None]
 
