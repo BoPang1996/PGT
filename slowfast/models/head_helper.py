@@ -15,6 +15,7 @@ class ResNetRoIHead(nn.Module):
 
     def __init__(
         self,
+        cfg,
         dim_in,
         num_classes,
         pool_size,
@@ -65,7 +66,13 @@ class ResNetRoIHead(nn.Module):
         assert (
             len({len(pool_size), len(dim_in)}) == 1
         ), "pathway dimensions are not consistent."
+        self.cfg = cfg
         self.num_pathways = len(pool_size)
+        if self.cfg.PGT.ENABLE:
+            self.cache = [None] * self.num_pathways
+            self.nframes = self.cfg.PGT.STEP_LEN
+            self.ov = self.cfg.PGT.OVERLAP
+
         from .detection_helper import ROIAlign
         for pathway in range(self.num_pathways):
             temporal_pool = nn.AvgPool3d(
@@ -106,10 +113,31 @@ class ResNetRoIHead(nn.Module):
         ), "Input tensor does not contain {} pathway".format(self.num_pathways)
         pool_out = []
         for pathway in range(self.num_pathways):
+            if self.cfg.PGT.ENABLE:
+                t = inputs[pathway].size(2)
+                if t < self.nframes[pathway]:
+                    inputs[pathway] = torch.cat([self.cache[pathway], inputs[pathway]], dim=2)
+                    assert inputs[pathway].size(2) == self.nframes[pathway]
+                else: # reset cache
+                    self.cache[pathway] = None
+                if self.cfg.PGT.CACHE == "last":
+                    cache = inputs[pathway][:, :, -self.ov[pathway]:, ...]
+                elif self.cfg.PGT.CACHE == "max":
+                    cache = F.adaptive_avg_pool3d(inputs[pathway], (self.ov[pathway], None, None))
+                elif self.cfg.PGT.CACHE == "avg":
+                    cache = F.adaptive_avg_pool3d(inputs[pathway], (self.ov[pathway], None, None))
+
             t_pool = getattr(self, "s{}_tpool".format(pathway))
             out = t_pool(inputs[pathway])
             assert out.shape[2] == 1
             out = torch.squeeze(out, 2)
+
+            # update cache
+            if self.cfg.PGT.ENABLE:
+                if isinstance(self.cache[pathway], torch.Tensor):
+                    momentum = self.cfg.PGT.CACHE_MOMENTUM
+                    cache = (1 - momentum) * cache + momentum * self.cache[pathway]
+                self.cache[pathway] = cache if self.cfg.PGT.TRUNCATE_GRAD else cache.detach()
 
             roi_align = getattr(self, "s{}_roi".format(pathway))
             out = roi_align(out, bboxes)
@@ -279,6 +307,7 @@ class X3DHead(nn.Module):
 
     def __init__(
         self,
+        cfg,
         dim_in,
         dim_inner,
         dim_out,
@@ -317,6 +346,7 @@ class X3DHead(nn.Module):
                 before the classifier.
         """
         super(X3DHead, self).__init__()
+        self.cfg = cfg
         self.pool_size = pool_size
         self.pool_type = pool_type
         self.dropout_rate = dropout_rate
@@ -326,6 +356,11 @@ class X3DHead(nn.Module):
         self.bn_mmt = bn_mmt
         self.inplace_relu = inplace_relu
         self.bn_lin5_on = bn_lin5_on
+        # X3D is single pathway
+        if self.cfg.PGT.ENABLE:
+            self.cache = None
+            self.nframes = self.cfg.PGT.STEP_LEN[0]
+            self.ov = self.cfg.PGT.OVERLAP[0]
         self._construct_head(dim_in, dim_inner, dim_out, norm_module)
 
     def _construct_head(self, dim_in, dim_inner, dim_out, norm_module):
@@ -388,6 +423,10 @@ class X3DHead(nn.Module):
                 "function.".format(self.act_func)
             )
 
+    def clear_cache(self):
+        assert self.cfg.PGT.ENABLE, "Only used when PGT enables!"
+        self.cache = None
+
     def forward(self, inputs):
         # In its current design the X3D head is only useable for a single
         # pathway input.
@@ -395,7 +434,31 @@ class X3DHead(nn.Module):
         x = self.conv_5(inputs[0])
         x = self.conv_5_bn(x)
         x = self.conv_5_relu(x)
+
+        # Progress padding
+        if self.cfg.PGT.ENABLE:
+            t = x.size(2)
+            if t < self.nframes:
+                x = torch.cat([self.cache, x], dim=2)
+                assert x.size(2) == self.nframes
+            else: # reset cache
+                self.cache = None
+            if self.cfg.PGT.CACHE == "last":
+                cache = x[:, :, -self.ov:, ...]
+            elif self.cfg.PGT.CACHE == "max":
+                cache = F.adaptive_avg_pool3d(x, (self.ov, None, None))
+            elif self.cfg.PGT.CACHE == "avg":
+                cache = F.adaptive_avg_pool3d(x, (self.ov, None, None))
+
+        # Temporal op
         x = self.t_pool(self.s_pool(x))
+
+        # Update cache
+        if self.cfg.PGT.ENABLE:
+            if isinstance(self.cache, torch.Tensor):
+                momentum = self.cfg.PGT.CACHE_MOMENTUM
+                cache = (1 - momentum) * cache + momentum * self.cache
+            self.cache = cache if self.cfg.PGT.TRUNCATE_GRAD else cache.detach()
 
         x = self.lin_5(x)
         if self.bn_lin5_on:

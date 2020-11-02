@@ -152,6 +152,7 @@ class X3D(nn.Module):
         else:
             spat_sz = int(math.ceil(cfg.DATA.TRAIN_CROP_SIZE / 32.0))
             self.head = head_helper.X3DHead(
+                cfg=cfg,
                 dim_in=dim_out,
                 dim_inner=dim_inner,
                 dim_out=cfg.X3D.DIM_C5,
