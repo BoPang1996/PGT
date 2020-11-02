@@ -137,7 +137,7 @@ def test(cfg):
             slowfast/config/defaults.py
     """
     # Set up environment.
-    logging.setup_logger(cfg.LOGS.DIR, 'test')
+    logging.setup_logger(cfg, 'test')
     du.init_distributed_training(cfg)
     # Set random seed from configs.
     np.random.seed(cfg.RNG_SEED)

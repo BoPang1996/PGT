@@ -144,7 +144,7 @@ def train_epoch(
 
 
 def train(cfg):
-    logging.setup_logger(cfg.LOGS.DIR, 'train')
+    logging.setup_logger(cfg, 'train')
 
     # Print config.
     logger.info("Train with config:")

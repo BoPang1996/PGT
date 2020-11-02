@@ -31,7 +31,7 @@ def main():
     args = parse_args()
     cfg = load_config(args)
 
-    logging.setup_logger(cfg.LOGS.DIR, 'test')
+    logging.setup_logger(cfg, 'test')
     evaluate_ava_from_files(
         os.path.join(cfg.AVA.ANNOTATION_DIR, cfg.AVA.LABEL_MAP_FILE),
         os.path.join(cfg.AVA.ANNOTATION_DIR, cfg.AVA.GROUNDTRUTH_FILE),

@@ -29,7 +29,7 @@ def _suppress_print():
     builtins.print = print_pass
 
 
-def setup_logger(save_dir, name=None):
+def setup_logger(cfg, name=None):
     logger = logging.getLogger('progress-action')
     logger.setLevel(logging.DEBUG)
     logger.propogate = False
@@ -46,16 +46,16 @@ def setup_logger(save_dir, name=None):
     logger.addHandler(ch)
 
     # multi-machine
-    if du.get_local_size() != du.get_world_size():
+    if cfg.NUM_GPUS != du.get_world_size():
         assert du.is_master_proc()
-        num_gpus = du.get_local_size()
-        worker = du.get_rank() // num_gpus
-        filename = os.path.join(save_dir, f"{name}-worker-{worker}.log")
+        num_gpus_per_machine = cfg.NUM_GPUS
+        worker = du.get_rank() // cfg.NUM_GPUS
+        filename = os.path.join(cfg.LOGS.DIR, f"{name}-worker-{worker}.log")
     else:
-        filename = os.path.join(save_dir, f"{name}.log")
+        filename = os.path.join(cfg.LOGS.DIR, f"{name}.log")
     if name is None or os.path.exists(filename):
         filename = os.path.join(
-            save_dir, '{} {}.log'.format(name, datetime.now()))
+            cfg.LOGS.DIR, '{} {}.log'.format(name, datetime.now()))
     fh = logging.FileHandler(filename)
     fh.setLevel(logging.DEBUG)
     fh.setFormatter(formatter)
