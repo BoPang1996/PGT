@@ -193,6 +193,7 @@ class ResNet(nn.Module):
             )
         else:
             self.head = head_helper.ResNetBasicHead(
+                cfg=cfg,
                 dim_in=[width_per_group * 32],
                 num_classes=cfg.MODEL.NUM_CLASSES,
                 pool_size=[[

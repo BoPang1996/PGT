@@ -9,7 +9,7 @@ DATA:
 
 DATA_LOADER:
   NUM_WORKERS: 7
-  PIN_MEMORY: False
+  PIN_MEMORY: True
 
 LOGS:
   DIR: obs://bucket-5006/penggao/logs/progress-action/Charades/MOX_SLOWFAST_PROG_76x8_R101_K400

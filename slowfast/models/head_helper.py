@@ -5,6 +5,7 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class ResNetRoIHead(nn.Module):
@@ -140,6 +141,7 @@ class ResNetBasicHead(nn.Module):
 
     def __init__(
         self,
+        cfg,
         dim_in,
         num_classes,
         pool_size,
@@ -169,7 +171,12 @@ class ResNetBasicHead(nn.Module):
         assert (
             len({len(pool_size), len(dim_in)}) == 1
         ), "pathway dimensions are not consistent."
+        self.cfg = cfg
         self.num_pathways = len(pool_size)
+        if self.cfg.PGT.ENABLE:
+            self.cache = [None] * self.num_pathways
+            self.nframes = self.cfg.PGT.STEP_LEN
+            self.ov = self.cfg.PGT.OVERLAP
 
         for pathway in range(self.num_pathways):
             if pool_type[0] == "avg":
@@ -209,15 +216,41 @@ class ResNetBasicHead(nn.Module):
                 "function.".format(act_func)
             )
 
+    def clear_cache(self):
+        assert self.cfg.PGT.ENABLE, "Only used when PGT enables!"
+        self.cache = [None] * self.num_pathways
+
     def forward(self, inputs):
         assert (
             len(inputs) == self.num_pathways
         ), "Input tensor does not contain {} pathway".format(self.num_pathways)
         pool_out = []
         for pathway in range(self.num_pathways):
+            # Progress padding
+            if self.cfg.PGT.ENABLE:
+                t = inputs[pathway].size(2)
+                if t < self.nframes[pathway]:
+                    inputs[pathway] = torch.cat([self.cache[pathway], inputs[pathway]], dim=2)
+                    assert inputs[pathway].size(2) == self.nframes[pathway]
+                else: # reset cache
+                    self.cache[pathway] = None
+                if self.cfg.PGT.CACHE == "last":
+                    cache = inputs[pathway][:, :, -self.ov[pathway]:, ...]
+                elif self.cfg.PGT.CACHE == "max":
+                    cache = F.adaptive_avg_pool3d(inputs[pathway], (self.ov[pathway], None, None))
+                elif self.cfg.PGT.CACHE == "avg":
+                    cache = F.adaptive_avg_pool3d(inputs[pathway], (self.ov[pathway], None, None))
+
             s_pool = getattr(self, "s{}_spool".format(pathway))
             t_pool = getattr(self, "s{}_tpool".format(pathway))
             pool_out.append(t_pool(s_pool(inputs[pathway])))
+
+            # update cache
+            if self.cfg.PGT.ENABLE:
+                if isinstance(self.cache[pathway], torch.Tensor):
+                    momentum = self.cfg.PGT.CACHE_MOMENTUM
+                    cache = (1 - momentum) * cache + momentum * self.cache[pathway]
+                self.cache[pathway] = cache if self.cfg.PGT.TRUNCATE_GRAD else cache.detach()
         x = torch.cat(pool_out, 1)
         # (N, C, T, H, W) -> (N, T, H, W, C).
         x = x.permute((0, 2, 3, 4, 1))

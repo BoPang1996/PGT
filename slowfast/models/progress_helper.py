@@ -102,6 +102,11 @@ class ProgressTrainer(object):
             if step == 0:
                 start_idx = [0, 0]
                 end_idx = self.num_frames
+
+                pg_modules = ["ResBlock", "VideoModelStem", "ResNetBasicHead"]
+                for m in self.model.modules():
+                    if m._get_name() in pg_modules:
+                        m.clear_cache()
             else:
                 start_idx, end_idx = [], []
                 for nf, ov in zip(self.num_frames, self.overlap):

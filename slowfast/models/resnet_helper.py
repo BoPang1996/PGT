@@ -321,6 +321,7 @@ class ResBlock(nn.Module):
         self.cache = None
         if pgt_pathway != None:
             self.nframes = cfg.PGT.STEP_LEN[pgt_pathway]
+            self.overlap = cfg.PGT.OVERLAP[pgt_pathway]
 
     def _construct(
         self,
@@ -376,18 +377,19 @@ class ResBlock(nn.Module):
     def forward(self, x):
         # Progress padding
         if self.pgt_pathway != None:
-            # FIXME: it's possible the intermediate feature map's T has been
-            # pooled. Current implmentation does not supports i3d.
-            if x.size(2) < self.nframes: # pg step
+            t = x.size(2)
+            if t < self.nframes:  # pg step
                 x = torch.cat([self.cache, x], dim=2)
-            else: # reset cache
+                assert x.size(2) == self.nframes
+            else:  # reset cache
                 self.cache = None
+            # FIXME: compute cache before or after concat?
             if self.cfg.PGT.CACHE == "last":
-                cache = x[:, :, -1, ...].unsqueeze(2)
+                cache = x[:, :, -self.overlap:, ...]
             elif self.cfg.PGT.CACHE == "max":
-                cache = F.max_pool3d(x, (x.size(2), 1, 1), 1)
+                cache = F.adaptive_max_pool3d(x, (self.overlap, None, None))
             elif self.cfg.PGT.CACHE == "avg":
-                cache = F.avg_pool3d(x, (x.size(2), 1, 1), 1)
+                cache = F.adaptive_avg_pool3d(x, (self.overlap, None, None))
         if hasattr(self, "branch1"):
             x = self.branch1_bn(self.branch1(x)) + self.branch2(x)
         else:
@@ -397,7 +399,7 @@ class ResBlock(nn.Module):
         # this will improve ~0.1 mAP on Charades
         if self.pgt_pathway != None:
             if isinstance(self.cache, torch.Tensor):
-                x = x[:, :, 1:, ...]
+                x = x[:, :, self.overlap:, ...]
                 momentum = self.cfg.PGT.CACHE_MOMENTUM
                 cache = (1 - momentum) * cache + momentum * self.cache
             self.cache = cache if self.cfg.PGT.TRUNCATE_GRAD else cache.detach()
@@ -577,7 +579,8 @@ class ResStage(nn.Module):
                     block_idx=i,
                     pgt_pathway=pathway if temp_progress else None,
                 )
-                self.add_module("pathway{}_res{}".format(pathway, i), res_block)
+                self.add_module("pathway{}_res{}".format(
+                    pathway, i), res_block)
                 if i in nonlocal_inds[pathway]:
                     if not nonlocal_progress:
                         nln = Nonlocal(

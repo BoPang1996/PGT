@@ -5,6 +5,7 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 def get_stem_func(name):
@@ -94,8 +95,14 @@ class VideoModelStem(nn.Module):
         # Construct the stem layer.
         self._construct_stem(dim_in, dim_out, stem_func_name, norm_module, pool_pad)
         if cfg.PGT.ENABLE:
-            self.cache = None
+            # NOTE: only fast pathway has cache
+            self.cache = [None] * self.num_pathways
             self.nframes = self.cfg.PGT.STEP_LEN
+            self.ov = self.cfg.PGT.OVERLAP
+
+    def clear_cache(self):
+        assert self.cfg.PGT.ENABLE, "Only used when PGT enables!"
+        self.cache = [None] * self.num_pathways
 
     def _construct_stem(self, dim_in, dim_out, stem_func_name, norm_module, pool_pad):
         stem_func = get_stem_func(stem_func_name)
@@ -124,25 +131,26 @@ class VideoModelStem(nn.Module):
             if self.cfg.PGT.ENABLE and self.kernel[pathway][0] > 1:
                 t = x[pathway].size(2)
                 if t < self.nframes[pathway]:
-                    x[pathway] = torch.cat([self.cache, x[pathway]], dim=2)
+                    x[pathway] = torch.cat([self.cache[pathway], x[pathway]], dim=2)
+                    assert x[pathway].size(2) == self.nframes[pathway]
                 else: # reset cache
-                    self.cache = None
+                    self.cache[pathway] = None
                 if self.cfg.PGT.CACHE == "last":
-                    cache = x[pathway][:, :, -1, ...].unsqueeze(2)
+                    cache = x[pathway][:, :, -self.ov[pathway]:, ...]
                 elif self.cfg.PGT.CACHE == "max":
-                    cache = F.max_pool3d(x[pathway], (t, 1, 1), 1)
+                    cache = F.adaptive_max_pool3d(x[pathway], (self.ov[pathway], None, None))
                 elif self.cfg.PGT.CACHE == "avg":
-                    cache = F.avg_pool3d(x[pathway], (t, 1, 1), 1)
+                    cache = F.adaptive_avg_pool3d(x[pathway], (self.ov[pathway], None, None))
             m = getattr(self, "pathway{}_stem".format(pathway))
             x[pathway] = m(x[pathway])
 
             # Remove progress padding and update cache
             if self.cfg.PGT.ENABLE and self.kernel[pathway][0] > 1:
-                if isinstance(self.cache, torch.Tensor):
-                    x[pathway] = x[pathway][:, :, 1:, ...]
+                if isinstance(self.cache[pathway], torch.Tensor):
+                    x[pathway] = x[pathway][:, :, self.ov[pathway]:, ...]
                     momentum = self.cfg.PGT.CACHE_MOMENTUM
-                    cache = (1 - momentum) * cache + momentum * self.cache
-                self.cache = cache if self.cfg.PGT.TRUNCATE_GRAD else cache.detach()
+                    cache = (1 - momentum) * cache + momentum * self.cache[pathway]
+                self.cache[pathway] = cache if self.cfg.PGT.TRUNCATE_GRAD else cache.detach()
         return x
 
 

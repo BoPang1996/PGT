@@ -326,6 +326,7 @@ class SlowFast(nn.Module):
             )
         else:
             self.head = head_helper.ResNetBasicHead(
+                cfg=cfg,
                 dim_in=[
                     width_per_group * 32,
                     width_per_group * 32 // cfg.SLOWFAST.BETA_INV,

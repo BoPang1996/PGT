@@ -11,8 +11,8 @@ import logging
 import os
 import sys
 import simplejson
+import torch.distributed as dist
 from datetime import datetime
-
 from fvcore.common.file_io import PathManager
 
 import slowfast.utils.distributed as du
@@ -45,7 +45,14 @@ def setup_logger(save_dir, name=None):
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
-    filename = os.path.join(save_dir, '{}.log'.format(name))
+    # multi-machine
+    if du.get_local_size() != du.get_world_size():
+        assert du.is_master_proc()
+        num_gpus = du.get_local_size()
+        worker = du.get_rank() // num_gpus
+        filename = os.path.join(save_dir, f"{name}-worker-{worker}.log")
+    else:
+        filename = os.path.join(save_dir, f"{name}.log")
     if name is None or os.path.exists(filename):
         filename = os.path.join(
             save_dir, '{} {}.log'.format(name, datetime.now()))
