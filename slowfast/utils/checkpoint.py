@@ -315,6 +315,7 @@ def load_checkpoint(
     else:
         # Load the checkpoint on CPU to avoid GPU mem spike.
         with open(path_to_checkpoint, "rb") as f:
+            print("Load from {}".format(path_to_checkpoint))
             checkpoint = torch.load(f, map_location="cpu")
         model_state_dict_3d = (
             model.module.state_dict() if data_parallel else model.state_dict()

@@ -265,6 +265,9 @@ _C.PGT.MGRID_STEP_LEN = []  # Number of progress step len.
 _C.PGT.MGRID_STEPS = []     # Number of progress steps.
 _C.PGT.MGRID_NO_FINETUNE = False  # Finetune at last epoch or not.
 
+# AVA test
+_C.PGT.ALL_STEP_TEST = False  # Use all steps to test rather than the last.
+
 # -----------------------------------------------------------------------------
 # Model options
 # -----------------------------------------------------------------------------

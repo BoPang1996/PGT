@@ -101,10 +101,12 @@ def train_epoch(
             optimizer.step()
         else:
             if cfg.DETECTION.ENABLE:
-                preds, loss = pg_trainer.step_train(inputs, labels, meta["boxes"])
+                # overwrite labels with labels of last step
+                preds, labels, loss = pg_trainer.step_train(
+                    inputs, labels, meta["boxes"], meta["step_idxes"])
 
             else:
-                preds, loss = pg_trainer.step_train(inputs, labels)
+                preds, _, loss = pg_trainer.step_train(inputs, labels)
 
         if cfg.DETECTION.ENABLE:
             if cfg.NUM_GPUS > 1:
@@ -224,6 +226,11 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
             if not cfg.PGT.ENABLE:
                 preds = model(inputs, meta["boxes"])
             else:
+                # step idx of last step
+                step_idx = pg_trainer.steps - 1
+                meta["boxes"] = meta["boxes"][meta["step_idxes"] == step_idx]
+                meta["ori_boxes"] = meta["ori_boxes"][meta["step_idxes"] == step_idx]
+                meta["metadata"] = meta["metadata"][meta["step_idxes"] == step_idx]
                 preds = pg_trainer.step_eval(inputs, meta["boxes"])
 
             preds = preds.cpu()

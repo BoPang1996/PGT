@@ -107,10 +107,14 @@ class ResNetRoIHead(nn.Module):
                 "function.".format(act_func)
             )
 
-    def forward(self, inputs, bboxes):
+    def forward(self, inputs, bboxes, slices=None):
         assert (
             len(inputs) == self.num_pathways
         ), "Input tensor does not contain {} pathway".format(self.num_pathways)
+        if bboxes.nelement() == 0:  # Empty bboxes
+            return None
+        if slices is not None:
+            inputs = [x[:, :, s] for x, s in zip(inputs, slices)]
         pool_out = []
         for pathway in range(self.num_pathways):
             if self.cfg.PGT.ENABLE:
