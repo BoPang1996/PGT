@@ -454,15 +454,10 @@ _C.SOLVER.OPTIMIZING_METHOD = "sgd"
 # ---------------------------------------------------------------------------- #
 
 _C.LOGS = CfgNode()
-
-# Output basedir.
-_C.LOGS.DIR = './logs'
-
-# Log period in iters.
-_C.LOGS.PERIOD = 100
-
-# Log model or not
-_C.LOGS.LOG_MODEL = False
+_C.LOGS.DIR = './logs'      # Output basedir.
+_C.LOGS.PERIOD = 100        # Log period in iters.
+_C.LOGS.LOG_MODEL = False   # Log model or not.
+_C.LOGS.FILE_NAME = ""      # Output file name.
 
 
 # ---------------------------------------------------------------------------- #
