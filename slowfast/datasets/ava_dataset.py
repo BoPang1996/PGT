@@ -46,12 +46,9 @@ class Ava(torch.utils.data.Dataset):
 
         self.pgt = cfg.PGT.ENABLE
         if self.pgt:
-            assert (
-                len(cfg.PGT.STEP_LEN) == 1
-            ), "Only single pathway is supported currently"
             self.steps = cfg.PGT.STEPS
-            self.overlap = cfg.PGT.OVERLAP[0]
-            self.num_frames = cfg.PGT.STEP_LEN[0]
+            self.overlap = cfg.PGT.OVERLAP[-1]
+            self.num_frames = cfg.PGT.STEP_LEN[-1]
 
         self._load_data(cfg)
 
@@ -345,7 +342,7 @@ class Ava(torch.utils.data.Dataset):
         if self.pgt:
         # Align keyframe with last step
             last_half_len = self.num_frames // 2 * self._sample_rate
-            half_lens = [self._seq_len - last_half_len, last_half_len],
+            half_lens = [self._seq_len - last_half_len, last_half_len]
         else:
             half_lens = self._seq_len // 2
 
@@ -361,7 +358,7 @@ class Ava(torch.utils.data.Dataset):
             # Get center_idx for each step
             step_center_idxes = [
                 seq[
-                    self.num_frames // 2 + i * (self.num_frames - 1)
+                    self.num_frames // 2 + i * (self.num_frames - self.overlap)
                 ]
                 for i in range(self.steps)
             ]
