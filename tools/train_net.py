@@ -389,7 +389,8 @@ def train(cfg):
             slowfast/config/defaults.py
     """
     # Set up environment.
-    logging.setup_logger(cfg, 'train')
+    filename = "train" if cfg.LOGS.FILE_NAME == "" else cfg.LOGS.FILE_NAME
+    logging.setup_logger(cfg, filename)
     du.init_distributed_training(cfg)
     # Set random seed from configs.
     np.random.seed(cfg.RNG_SEED)

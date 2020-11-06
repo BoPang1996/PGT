@@ -46,12 +46,9 @@ class Ava(torch.utils.data.Dataset):
 
         self.pgt = cfg.PGT.ENABLE
         if self.pgt:
-            assert (
-                len(cfg.PGT.STEP_LEN) == 1
-            ), "Only single pathway is supported currently"
             self.steps = cfg.PGT.STEPS
-            self.overlap = cfg.PGT.OVERLAP[0]
-            self.num_frames = cfg.PGT.STEP_LEN[0]
+            self.overlap = cfg.PGT.OVERLAP[-1]
+            self.num_frames = cfg.PGT.STEP_LEN[-1]
 
         self._load_data(cfg)
 
@@ -342,20 +339,26 @@ class Ava(torch.utils.data.Dataset):
         """
         video_idx, sec_idx, sec, center_idx = self._keyframe_indices[idx]
         # Get the frame idxs for current clip.
+        if self.pgt:
         # Align keyframe with last step
-        last_half_len = self.num_frames // 2 * self._sample_rate
+            last_half_len = self.num_frames // 2 * self._sample_rate
+            half_lens = [self._seq_len - last_half_len, last_half_len]
+        else:
+            half_lens = self._seq_len // 2
+
         seq = utils.get_sequence(
             center_idx,
-            [self._seq_len - last_half_len, last_half_len],
+            half_lens,
             self._sample_rate,
             num_frames=len(self._image_paths[video_idx]),
         )
-
+        
+        step_idxes = []
         if self.pgt:
             # Get center_idx for each step
             step_center_idxes = [
                 seq[
-                    self.num_frames // 2 + i * (self.num_frames - 1)
+                    self.num_frames // 2 + i * (self.num_frames - self.overlap)
                 ]
                 for i in range(self.steps)
             ]
@@ -381,7 +384,6 @@ class Ava(torch.utils.data.Dataset):
             #     clip_label_list += cll
             # step_idxes = np.array(step_idxes, dtype=np.int32)
 
-            step_idxes = []
             clip_label_list = []
             metadata = []
             for step, s in enumerate(secs):

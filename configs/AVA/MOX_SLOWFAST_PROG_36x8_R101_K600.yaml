@@ -1,0 +1,19 @@
+_BASE_: SLOWFAST_PROG_36x8_R101_K600.yaml
+
+TRAIN:
+  CHECKPOINT_TYPE: aia
+  CHECKPOINT_FILE_PATH: obs://bucket-5006/data/slowfast/models/k600/SLOWFAST_8x8_R101.pth
+
+AVA:
+  FRAME_DIR: obs://bucket-5006/data/AVA/fair/frames
+  FRAME_LIST_DIR: obs://bucket-5006/data/AVA/fair/frame_lists
+  ANNOTATION_DIR: obs://bucket-5006/data/AVA/fair/annotations
+
+DATA_LOADER:
+  NUM_WORKERS: 7
+  PIN_MEMORY: False
+
+LOGS:
+  DIR: obs://bucket-5006/lyz/logs/progress-action/AVA/MOX_SLOWFAST_PROG_36x8_R101_K600
+
+NUM_GPUS: 8
