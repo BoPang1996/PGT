@@ -29,13 +29,13 @@ def parse_args():
         description="Provide SlowFast video training and testing pipeline."
     )
     parser.add_argument(
-        "--rank",
+        "--shard_id",
         help="The shard id of current node, Starts from 0 to num_shards - 1",
         default=0,
         type=int,
     )
     parser.add_argument(
-        "--world_size",
+        "--num_shards",
         help="Number of shards using by the job",
         default=1,
         type=int,
@@ -53,6 +53,13 @@ def parse_args():
         default="configs/Kinetics/SLOWFAST_4x16_R50.yaml",
         type=str,
     )
+    # moxing setting
+    parser.add_argument("--rank", help="Used by model arts", default=0, type=int)
+    parser.add_argument("--world_size", help="Used by model arts", default=1, type=int)
+    # no use args
+    parser.add_argument("--data_url", help="No use", type=str)
+    parser.add_argument("--train_url", help="No use", type=str)
+    parser.add_argument("--lr", help="No use", type=float)
     if len(sys.argv) == 1:
         parser.print_help()
     return parser.parse_known_args()
@@ -72,28 +79,19 @@ def load_config(args, opts=None):
         cfg.merge_from_file(args.cfg_file)
     # Load config from command line, overwrite config from opts.
     if opts is not None:
-        # remove unkown args
-        remove_lists = []
-        for i in range(len(opts)):
-            if opts[i].startswith("--"):
-                remove_lists.append(opts[i])
-                if "=" not in opts[i]:
-                    remove_lists.append(opts[i+1])
-            elif opts[i].startswith("-"):
-                remove_lists.append(opts[i])
-        for opt in remove_lists:
-            print("Remove unkonwn args {}".format(opt))
-            opts.remove(opt)
         cfg.merge_from_list(opts)
 
     # Inherit parameters from args.
-    if hasattr(args, "world_size") and hasattr(args, "rank"):
-        cfg.NUM_SHARDS = args.world_size
-        cfg.SHARD_ID = args.rank
+    if hasattr(args, "num_shards") and hasattr(args, "shard_id"):
+        cfg.NUM_SHARDS = args.num_shards
+        cfg.SHARD_ID = args.shard_id
     if hasattr(args, "rng_seed"):
         cfg.RNG_SEED = args.rng_seed
     if hasattr(args, "output_dir"):
         cfg.LOGS.DIR = args.output_dir
+    if hasattr(args, "world_size") and hasattr(args, "rank"):
+        cfg.NUM_SHARDS = args.world_size
+        cfg.SHARD_ID = args.rank
 
     # Create the checkpoint dir.
     cu.make_checkpoint_dir(cfg.LOGS.DIR)
