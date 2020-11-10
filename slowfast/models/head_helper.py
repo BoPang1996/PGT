@@ -21,6 +21,7 @@ class ResNetRoIHead(nn.Module):
         pool_size,
         resolution,
         scale_factor,
+        pool_type="avg",
         dropout_rate=0.0,
         act_func="softmax",
         aligned=True,
@@ -75,9 +76,14 @@ class ResNetRoIHead(nn.Module):
 
         from .detection_helper import ROIAlign
         for pathway in range(self.num_pathways):
-            temporal_pool = nn.AvgPool3d(
-                [pool_size[pathway][0], 1, 1], stride=1
-            )
+            if pool_type == "avg":
+                temporal_pool = nn.AvgPool3d(
+                    [pool_size[pathway][0], 1, 1], stride=1
+                )
+            elif pool_type == "max":
+                temporal_pool = nn.MaxPool3d(
+                    [pool_size[pathway][0], 1, 1], stride=1
+                )
             self.add_module("s{}_tpool".format(pathway), temporal_pool)
 
             roi_align = ROIAlign(

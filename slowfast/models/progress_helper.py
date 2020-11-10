@@ -100,7 +100,8 @@ class ProgressTrainer(object):
         last_labels = None
 
         for step in range(self.steps):
-            assert (step_idxes == step).any()
+            if step_idxes != None:
+                assert (step_idxes == step).any()
             if step == 0:
                 start_idx = [0, 0]
                 end_idx = self.num_frames

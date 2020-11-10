@@ -73,14 +73,15 @@ if __name__ == "__main__":
     bucket_name = urlparse(args.data_url).netloc
 
     if args.install_pkg:
-        # upgrade pypi
-        subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
-        # remove pyyaml or fvcore install will fail
+        # FIXME: remove pyyaml or fvcore install will fail
         subprocess.call([sys.executable, "-m", "pip", "install", "--ignore-installed", "PyYAML"])
         pip_install_directory(bucket_name, args.install_log)
+        # FIXME: cannot install tensorboardX from .whl
+        pip_install("tensorboardX", True)
     if "configs/AVA/" in args.cfg:
         compile_custom()
 
+    pip_install("tensorboardX", True)
     sys.path.append("progress-action/")
     from run_net import main
     main()

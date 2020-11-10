@@ -10,7 +10,6 @@ SOLVER:
 
 DATA_LOADER:
   NUM_WORKERS: 7
-  PIN_MEMORY: False
 
 LOGS:
   DIR: obs://bucket-5006/penggao/logs/progress-action/miniKinetics/MOX_SLOWFAST_PROG_36x8_R50

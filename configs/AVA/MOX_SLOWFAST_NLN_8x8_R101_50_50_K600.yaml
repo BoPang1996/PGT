@@ -1,0 +1,16 @@
+_BASE_: SLOWFAST_NLN_8x8_R101_50_50_K600.yaml
+
+AVA:
+  FRAME_DIR: obs://bucket-5006/data/AVA/fair/frames
+  FRAME_LIST_DIR: obs://bucket-5006/data/AVA/fair/frame_lists
+  ANNOTATION_DIR: obs://bucket-5006/data/AVA/fair/annotations
+
+DATA_LOADER:
+  NUM_WORKERS: 4
+  PIN_MEMORY: False
+
+LOGS:
+  DIR: obs://bucket-5006/penggao/logs/progress-action/AVA/SLOWFAST_NLN_8x8_R101_50_50_K600
+
+NUM_GPUS: 8
+NUM_SHARDS: 2

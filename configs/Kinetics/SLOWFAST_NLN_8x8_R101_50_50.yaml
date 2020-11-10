@@ -1,0 +1,9 @@
+_BASE_: SLOWFAST_8x8_R101_50_50.yaml
+
+NONLOCAL:
+  LOCATION: [[[], []], [[], []], [[6, 13, 20], []], [[], []]]
+  GROUP: [[1, 1], [1, 1], [1, 1], [1, 1]]
+  INSTANTIATION: dot_product
+
+LOGS:
+  DIR: logs/Kinetics/SLOWFAST_NLN_8x8_R101_50_50

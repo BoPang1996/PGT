@@ -185,6 +185,7 @@ class ResNet(nn.Module):
                 dim_in=[width_per_group * 32],
                 num_classes=cfg.MODEL.NUM_CLASSES,
                 pool_size=[[cfg.DATA.NUM_FRAMES // pool_size[0][0], 1, 1]],
+                pool_type=cfg.MODEL.FINAL_POOL[1],
                 resolution=[[cfg.DETECTION.ROI_XFORM_RESOLUTION] * 2],
                 scale_factor=[cfg.DETECTION.SPATIAL_SCALE_FACTOR],
                 dropout_rate=cfg.MODEL.DROPOUT_RATE,
