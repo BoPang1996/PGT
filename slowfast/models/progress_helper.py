@@ -66,6 +66,8 @@ class ProgressTrainer(object):
 
         if self.model.training or cfg.PGT.PG_EVAL:
             tpool_size = [1] if self.single_pathway else [1, 1]
+            if cfg.PGT.TPOOL_SIZE != tpool_size:
+                self.logger.warn(f"You set PGT.TPOOL_SIZE {cfg.PGT.TPOOL_SIZE} but this setting is modified to {tpool_size} because PGT.PG_EVAL is on.")
         else:
             tpool_size = cfg.PGT.TPOOL_SIZE
 

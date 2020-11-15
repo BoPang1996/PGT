@@ -251,6 +251,7 @@ _C.PGT.CACHE_MOMENTUM = 0.0  # Progress cache momentum.
 _C.PGT.PG_EVAL = False   # Progress evaluation.
 _C.PGT.ENSEMBLE_METHOD = "sum"  # Ensemble method for progress evaluation.
 _C.PGT.TPOOL_SIZE = [4]  # Final temp pooling size for progress
+_C.PGT.HEAD = True       # Enable progressive head
 
 # Norm type for progress NL. Could be "none", "batchnorm", "layernorm"
 _C.PGT.NL_NORM = "batchnorm"

@@ -123,7 +123,7 @@ class ResNetRoIHead(nn.Module):
             inputs = [x[:, :, s] for x, s in zip(inputs, slices)]
         pool_out = []
         for pathway in range(self.num_pathways):
-            if self.cfg.PGT.ENABLE:
+            if self.cfg.PGT.ENABLE and self.cfg.PGT.HEAD:
                 t = inputs[pathway].size(2)
                 if t < self.nframes[pathway]:
                     inputs[pathway] = torch.cat([self.cache[pathway], inputs[pathway]], dim=2)
@@ -133,7 +133,7 @@ class ResNetRoIHead(nn.Module):
                 if self.cfg.PGT.CACHE == "last":
                     cache = inputs[pathway][:, :, -self.ov[pathway]:, ...]
                 elif self.cfg.PGT.CACHE == "max":
-                    cache = F.adaptive_avg_pool3d(inputs[pathway], (self.ov[pathway], None, None))
+                    cache = F.adaptive_max_pool3d(inputs[pathway], (self.ov[pathway], None, None))
                 elif self.cfg.PGT.CACHE == "avg":
                     cache = F.adaptive_avg_pool3d(inputs[pathway], (self.ov[pathway], None, None))
 
@@ -143,7 +143,7 @@ class ResNetRoIHead(nn.Module):
             out = torch.squeeze(out, 2)
 
             # update cache
-            if self.cfg.PGT.ENABLE:
+            if self.cfg.PGT.ENABLE and self.cfg.PGT.HEAD:
                 if isinstance(self.cache[pathway], torch.Tensor):
                     momentum = self.cfg.PGT.CACHE_MOMENTUM
                     cache = (1 - momentum) * cache + momentum * self.cache[pathway]
@@ -265,7 +265,7 @@ class ResNetBasicHead(nn.Module):
         pool_out = []
         for pathway in range(self.num_pathways):
             # Progress padding
-            if self.cfg.PGT.ENABLE:
+            if self.cfg.PGT.ENABLE and self.cfg.PGT.HEAD:
                 t = inputs[pathway].size(2)
                 if t < self.nframes[pathway]:
                     inputs[pathway] = torch.cat([self.cache[pathway], inputs[pathway]], dim=2)
@@ -284,7 +284,7 @@ class ResNetBasicHead(nn.Module):
             pool_out.append(t_pool(s_pool(inputs[pathway])))
 
             # update cache
-            if self.cfg.PGT.ENABLE:
+            if self.cfg.PGT.ENABLE and self.cfg.PGT.HEAD:
                 if isinstance(self.cache[pathway], torch.Tensor):
                     momentum = self.cfg.PGT.CACHE_MOMENTUM
                     cache = (1 - momentum) * cache + momentum * self.cache[pathway]
@@ -446,7 +446,7 @@ class X3DHead(nn.Module):
         x = self.conv_5_relu(x)
 
         # Progress padding
-        if self.cfg.PGT.ENABLE:
+        if self.cfg.PGT.ENABLE and self.cfg.PGT.HEAD:
             t = x.size(2)
             if t < self.nframes:
                 x = torch.cat([self.cache, x], dim=2)
@@ -456,7 +456,7 @@ class X3DHead(nn.Module):
             if self.cfg.PGT.CACHE == "last":
                 cache = x[:, :, -self.ov:, ...]
             elif self.cfg.PGT.CACHE == "max":
-                cache = F.adaptive_avg_pool3d(x, (self.ov, None, None))
+                cache = F.adaptive_max_pool3d(x, (self.ov, None, None))
             elif self.cfg.PGT.CACHE == "avg":
                 cache = F.adaptive_avg_pool3d(x, (self.ov, None, None))
 
@@ -464,7 +464,7 @@ class X3DHead(nn.Module):
         x = self.t_pool(self.s_pool(x))
 
         # Update cache
-        if self.cfg.PGT.ENABLE:
+        if self.cfg.PGT.ENABLE and self.cfg.PGT.HEAD:
             if isinstance(self.cache, torch.Tensor):
                 momentum = self.cfg.PGT.CACHE_MOMENTUM
                 cache = (1 - momentum) * cache + momentum * self.cache

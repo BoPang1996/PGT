@@ -2,6 +2,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
 """Train a video classification model."""
+import os
 import numpy as np
 import pprint
 import torch
@@ -430,7 +431,7 @@ def train(cfg):
 
     # Create meters.
     if du.is_master_proc():
-        tblogger = SummaryWriter(cfg.LOGS.DIR)
+        tblogger = SummaryWriter(os.path.join(cfg.LOGS.DIR, "tb"))
     else:
         tblogger = None
     if cfg.DETECTION.ENABLE:

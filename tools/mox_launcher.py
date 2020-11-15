@@ -73,6 +73,9 @@ if __name__ == "__main__":
     bucket_name = urlparse(args.data_url).netloc
 
     if args.install_pkg:
+        # poli env
+        # subprocess.call(["rm", "-r", "/home/work/anaconda3/lib/python3.6/site-packages/portalocker-1.7.1.dist-info/"])
+        # subprocess.call(["rm", "-r", "/home/work/anaconda3/lib/python3.6/site-packages/yacs-0.1.8.dist-info/"])
         # FIXME: remove pyyaml or fvcore install will fail
         subprocess.call([sys.executable, "-m", "pip", "install", "--ignore-installed", "PyYAML"])
         pip_install_directory(bucket_name, args.install_log)
