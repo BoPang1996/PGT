@@ -8,7 +8,3 @@ data/
 scripts/
 logs
 slowfast.egg-info/
-
-tools/mox_run_net.py
-tools/mox_run_net2.py
-tools/mox_run_net3.py

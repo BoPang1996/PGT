@@ -4,7 +4,8 @@ Code for paper [PGT: A Progressive Method for Training Models on Long Videos](ht
 
 ## Install
 
-Run `pip install -r requirements.txt`.
+1. Run `pip install -r requirements.txt`.
+2. Run `python setup.py build develop` to compile RoIAlign python wrapper.
 
 ## Model zoo
 
