@@ -1,7 +1,0 @@
-_BASE_: SLOWFAST_8x8_R101.yaml
-
-RESNET:
-  NUM_BLOCK_TEMP_KERNEL: [[3, 3], [4, 4], [6, 6], [3, 3]]
-
-LOGS:
-  DIR: logs/Kinetics/SLOWFAST_8x8_R101_50_50

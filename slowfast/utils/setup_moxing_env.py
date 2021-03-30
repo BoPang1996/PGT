@@ -11,7 +11,6 @@ filelock.logger().setLevel(logging.WARNING)
 
 def safe_s3_cache(org_path, targ_path, copy_type):
     import moxing as mox
-    import slowfast.utils.mox_patch_0603
     mox.file.shift("os", "mox")
 
     safe_flag = targ_path + ".safe"
@@ -33,7 +32,6 @@ def wrap_input_path(module, func_name, tmp_dir="/cache/", copy_method="file"):
     def wrapped_func(input_path, *args, **kwargs):
         if input_path.startswith("obs://"):
             import moxing as mox
-            import slowfast.utils.mox_patch_0603
             mox.file.shift("os", "mox")
 
             relative_path = os.path.join("obs/", input_path[6:])
@@ -57,7 +55,6 @@ def wrap_output_path(module, func_name, tmp_dir="/cache/"):
     def wrapped_func(data, output_path, *args, **kwargs):
         if isinstance(output_path, six.string_types) and output_path.startswith("obs://"):
             import moxing as mox
-            import slowfast.utils.mox_patch_0603
             mox.file.shift("os", "mox")
 
             with tempfile.NamedTemporaryFile(dir=tmp_dir) as f:
@@ -74,7 +71,6 @@ def wrap_output_path(module, func_name, tmp_dir="/cache/"):
 def wrap_input_path2(input_path, tmp_dir="/cache/", copy_method="file"):
     if input_path.startswith("obs://"):
         import moxing as mox
-        import slowfast.utils.mox_patch_0603
         mox.file.shift("os", "mox")
 
         relative_path = os.path.join("obs/", input_path[6:])
@@ -93,7 +89,6 @@ def wrap_input_path2(input_path, tmp_dir="/cache/", copy_method="file"):
 def wrap_output_path2(origin_func, data, output_path, *args, **kwargs):
     if isinstance(output_path, six.string_types) and output_path.startswith("obs://"):
         import moxing as mox
-        import slowfast.utils.mox_patch_0603
         mox.file.shift("os", "mox")
 
         with tempfile.NamedTemporaryFile(dir="/cache/") as f:
